@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class Option
- * 
+ *
  * @property int $id
  * @property string $text
  * @property bool $is_image
@@ -20,7 +20,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $order
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * 
+ *
  * @property Collection|Response[] $responses
  *
  * @package App\Models
@@ -32,15 +32,22 @@ class Option extends Model
 	protected $casts = [
 		'is_image' => 'bool',
 		'value' => 'int',
-		'order' => 'int'
+		'order' => 'int',
+        'question_id' => 'int'
 	];
 
 	protected $fillable = [
 		'text',
 		'is_image',
 		'value',
-		'order'
+		'order',
+        'question_id'
 	];
+
+    public function question()
+	{
+		return $this->belongsTo(Question::class);
+	}
 
 	public function responses()
 	{

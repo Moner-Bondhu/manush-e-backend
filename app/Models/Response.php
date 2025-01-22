@@ -7,11 +7,12 @@
 namespace App\Models;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class Response
- * 
+ *
  * @property int $id
  * @property int $profile_id
  * @property int $question_id
@@ -20,7 +21,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int|null $numeric_answer
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * 
+ *
  * @property Option $option
  * @property Profile $profile
  * @property Question $question
@@ -29,6 +30,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Response extends Model
 {
+    use HasFactory;
 	protected $table = 'responses';
 
 	protected $casts = [

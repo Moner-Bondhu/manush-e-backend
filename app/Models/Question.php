@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Class Question
- * 
+ *
  * @property int $id
  * @property int $scale_id
  * @property string $text
@@ -22,7 +22,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $order
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * 
+ *
  * @property Scale $scale
  * @property Collection|Response[] $responses
  *
@@ -49,6 +49,11 @@ class Question extends Model
 	public function scale()
 	{
 		return $this->belongsTo(Scale::class);
+	}
+
+    public function options()
+	{
+		return $this->hasMany(Option::class);
 	}
 
 	public function responses()
