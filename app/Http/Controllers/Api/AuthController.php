@@ -46,7 +46,7 @@ class AuthController extends BaseController
                 ]);
 
                 if ($user->phone_number) {
-                    SendSms::dispatch($user->phone_number, __('auth.otp', ['otp' => $otp->otp]));
+                    SendSms::dispatch($user->phone_number, __('auth.otp', ['code' => $otp->otp]));
                 }
             }
 
