@@ -19,17 +19,14 @@ Thank you for considering contributing to the Manush-E backend API! Your help is
 
 3. **Create a Branch**
     ```bash
-    Copy
-    Edit
-    git checkout -b FEATURE/your-feature-name```
+    git checkout -b FEATURE_your-feature-name
+    ```
 
 4. **Make Your Changes**
     Ensure your code follows Laravel and PSR-12 standards.
 
 5. **Run Tests Locally**
     ```bash
-    Copy
-    Edit
     php artisan test
     ```
     
@@ -37,7 +34,7 @@ Thank you for considering contributing to the Manush-E backend API! Your help is
     ```bash
     git add .
     git commit -m "Add: short description of change"
-    git push origin FEATURE/your-feature-name
+    git push origin FEATURE_your-feature-name
     ```
 
 7. **Open a Pull Request**
