@@ -18,6 +18,7 @@ class ProfileFactory extends Factory
     public function definition(): array
     {
         return [
+            'user_id' => User::factory(),
             'type' => 'child',
             'full_name' => fake()->name(),
             'relation_type' => 'child'
