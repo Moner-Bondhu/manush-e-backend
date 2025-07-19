@@ -17,7 +17,6 @@ class ApiControllerTest extends TestCase
 {
     use RefreshDatabase;
 
-
     public function test_authenticated_user_can_fetch_self()
     {
         $user = User::factory()->create();
@@ -59,7 +58,6 @@ class ApiControllerTest extends TestCase
         $child = Profile::factory()->create(['user_id' => $user->id, 'type' => 'child']);
         $parent = Profile::factory()->create(['user_id' => $user->id, 'type' => 'parent']);
         $child->demography()->create(['gender' => 'male', 'dob' => '2010-01-01', 'grade' => '5']);
-        // Use a non-null grade for parent or make it nullable in migration
         $parent->demography()->create(['gender' => 'male', 'dob' => '1980-01-01', 'grade' => '1']);
 
         Sanctum::actingAs($user);
@@ -97,88 +95,84 @@ class ApiControllerTest extends TestCase
     }
 
     public function test_user_can_store_response_for_question()
-{
-    $user = User::factory()->create();
-    Sanctum::actingAs($user);
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
 
-    $scale = Scale::factory()->create(['visible_to' => 'child']);
-    $question = Question::factory()->create(['scale_id' => $scale->id]);
-    $option = Option::factory()->create(['question_id' => $question->id]);
+        $scale = Scale::factory()->create(['visible_to' => 'child']);
+        $question = Question::factory()->create(['scale_id' => $scale->id]);
+        $option = Option::factory()->create(['question_id' => $question->id]);
 
-    // Create profile of matching type for user
-    $profile = Profile::factory()->create([
-        'user_id' => $user->id,
-        'type' => $scale->visible_to,
-    ]);
-
-    $payload = [
-        'option_id' => $option->id,
-        'text_answer' => 'This is my answer',
-        'numeric_answer' => 7,
-    ];
-
-    $response = $this->postJson("/api/question/respond/{$question->id}", $payload);
-
-    $response->assertStatus(200)
-        ->assertJson([
-            'success' => true,
-            'message' => 'created',
+        $profile = Profile::factory()->create([
+            'user_id' => $user->id,
+            'type' => $scale->visible_to,
         ]);
 
-    $this->assertDatabaseHas('responses', [
-        'profile_id' => $profile->id,
-        'question_id' => $question->id,
-        'option_id' => $option->id,
-        'text_answer' => 'This is my answer',
-        'numeric_answer' => 7,
-    ]);
-}
+        $payload = [
+            'option_id' => $option->id,
+            'text_answer' => 'This is my answer',
+            'numeric_answer' => 7,
+        ];
 
-public function test_user_can_update_existing_response_for_question()
-{
-    $user = User::factory()->create();
-    Sanctum::actingAs($user);
+        $response = $this->postJson("/api/question/respond/{$question->id}", $payload);
 
-    $scale = Scale::factory()->create(['visible_to' => 'child']);
-    $question = Question::factory()->create(['scale_id' => $scale->id]);
-    $option1 = Option::factory()->create(['question_id' => $question->id]);
-    $option2 = Option::factory()->create(['question_id' => $question->id]);
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'message' => 'created',
+            ]);
 
-    $profile = Profile::factory()->create([
-        'user_id' => $user->id,
-        'type' => $scale->visible_to,
-    ]);
+        $this->assertDatabaseHas('responses', [
+            'profile_id' => $profile->id,
+            'question_id' => $question->id,
+            'option_id' => $option->id,
+            'text_answer' => 'This is my answer',
+            'numeric_answer' => 7,
+        ]);
+    }
 
-    // Create an existing response
-    $existingResponse = Response::factory()->create([
-        'profile_id' => $profile->id,
-        'question_id' => $question->id,
-        'option_id' => $option1->id,
-        'text_answer' => 'Old answer',
-        'numeric_answer' => 3,
-    ]);
+    public function test_user_can_update_existing_response_for_question()
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
 
-    $payload = [
-        'option_id' => $option2->id,
-        'text_answer' => 'Updated answer',
-        'numeric_answer' => 8,
-    ];
+        $scale = Scale::factory()->create(['visible_to' => 'child']);
+        $question = Question::factory()->create(['scale_id' => $scale->id]);
+        $option1 = Option::factory()->create(['question_id' => $question->id]);
+        $option2 = Option::factory()->create(['question_id' => $question->id]);
 
-    $response = $this->postJson("/api/question/respond/{$question->id}", $payload);
-
-    $response->assertStatus(200)
-        ->assertJson([
-            'success' => true,
-            'message' => 'created', // same message returned from controller on update
+        $profile = Profile::factory()->create([
+            'user_id' => $user->id,
+            'type' => $scale->visible_to,
         ]);
 
-    // Assert the response was updated
-    $this->assertDatabaseHas('responses', [
-        'id' => $existingResponse->id,
-        'option_id' => $option2->id,
-        'text_answer' => 'Updated answer',
-        'numeric_answer' => 8,
-    ]);
-}
+        $existingResponse = Response::factory()->create([
+            'profile_id' => $profile->id,
+            'question_id' => $question->id,
+            'option_id' => $option1->id,
+            'text_answer' => 'Old answer',
+            'numeric_answer' => 3,
+        ]);
 
+        $payload = [
+            'option_id' => $option2->id,
+            'text_answer' => 'Updated answer',
+            'numeric_answer' => 8,
+        ];
+
+        $response = $this->postJson("/api/question/respond/{$question->id}", $payload);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'message' => 'created',
+            ]);
+
+        $this->assertDatabaseHas('responses', [
+            'id' => $existingResponse->id,
+            'option_id' => $option2->id,
+            'text_answer' => 'Updated answer',
+            'numeric_answer' => 8,
+        ]);
+    }
 }

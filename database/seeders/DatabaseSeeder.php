@@ -16,7 +16,6 @@ class DatabaseSeeder extends Seeder
         // Create a single test user
         User::create([
             'name' => 'Test User',
-            'email' => 'test@example.com',
             'phone_number' => '01700000000', // Must be unique
             'experiment_tag' => 'onboarding_test',
             'user_type' => 'user',

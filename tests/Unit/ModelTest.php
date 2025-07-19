@@ -62,45 +62,6 @@ class ModelTest extends TestCase
     }
 
     /** @test */
-    // public function otp_validation_logic()
-    // {
-    //     $user = User::factory()->create();
-
-    //     // Create a valid OTP
-    //     $otp = Otp::factory()->create([
-    //         'user_id' => $user->id,
-    //         'otp' => '1234',
-    //         'is_valid' => true,
-    //         'attempts_left' => 2,
-    //         'expires_at' => Carbon::now()->addMinutes(10),
-    //     ]);
-
-    //     // Assert the OTP is valid initially
-    //     $this->assertTrue($otp->is_valid_otp());
-
-    //     // Update attempts_left to 0, OTP should be invalid
-    //     $otp->update(['attempts_left' => 0]);
-    //     $otp->refresh();
-    //     $this->assertFalse($otp->is_valid_otp());
-
-    //     // Update expires_at to past time, OTP should be invalid
-    //     $otp->update([
-    //         'attempts_left' => 2,
-    //         'expires_at' => Carbon::now()->subMinute(),
-    //     ]);
-    //     $otp->refresh();
-    //     $this->assertFalse($otp->is_valid_otp());
-
-    //     // Set is_valid to false, OTP should be invalid
-    //     $otp->update([
-    //         'is_valid' => false,
-    //         'expires_at' => Carbon::now()->addMinutes(10),
-    //     ]);
-    //     $otp->refresh();
-    //     $this->assertFalse($otp->is_valid_otp());
-    // }
-
-    /** @test */
     public function profile_relationships()
     {
         $user = User::factory()->create();

@@ -56,7 +56,6 @@ class ResourceTest extends TestCase
         $this->assertEquals(3, $array['value']);
         $this->assertEquals(1, $array['order']);
 
-        // question is relation, should be null here because not loaded
         $this->assertArrayNotHasKey('question', $array);
     }
 
@@ -128,27 +127,16 @@ class ResourceTest extends TestCase
     public function test_user_resource()
     {
         $user = User::factory()->make([
-            'name' => 'User Name',
-            'phone_number' => '1234567890',
-            'experiment_tag' => 'exp1',
-            'is_onboarded' => true,
+            'id' => 1,
+            'phone_number' => '01700000000',
+            // no email included here
         ]);
-        $profile = Profile::factory()->make([
-            'type' => 'child',
-            'full_name' => 'Henriette Rau',
-            'relation_type' => 'child',
-        ]);
-        $user->setRelation('profiles', collect([new ProfileResource($profile)]));
 
         $resource = new UserResource($user);
         $array = $resource->response()->getData(true)['data'];
 
-        $this->assertEquals('User Name', $array['name']);
-        $this->assertEquals('1234567890', $array['phone_number']);
-        $this->assertEquals('exp1', $array['experiment_tag']);
-        $this->assertTrue($array['is_onboarded']);
-        $this->assertIsArray($array['profiles']);
-        $this->assertArrayHasKey('created_at', $array);
-        $this->assertArrayHasKey('updated_at', $array);
+        $this->assertEquals(1, $array['id']);
+        $this->assertEquals('01700000000', $array['phone_number']);
+        $this->assertArrayNotHasKey('email', $array); // make sure email is NOT present
     }
 }

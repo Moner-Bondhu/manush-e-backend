@@ -15,7 +15,6 @@ class AuthTest extends TestCase
     {
         $phoneNumber = '01700000000';
 
-        // Create user and OTP manually
         $user = User::factory()->create(['phone_number' => $phoneNumber]);
 
         $otp = Otp::factory()->create([
@@ -38,7 +37,7 @@ class AuthTest extends TestCase
                 'user' => [
                     'id',
                     'phone_number',
-                    // add other user fields if your resource includes more
+
                 ],
             ],
         ]);
