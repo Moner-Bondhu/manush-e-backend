@@ -17,7 +17,7 @@ class OptionResource extends JsonResource
         return [
             'id' => $this->id,
             'text' => $this->text,
-            'is_image' => $this->text,
+            'is_image' => $this->is_image,  // Correct property here
             'value' => $this->value,
             'order' => $this->order,
             'question' => new QuestionResource($this->whenLoaded('question'))

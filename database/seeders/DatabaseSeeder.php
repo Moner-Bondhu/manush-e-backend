@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
@@ -13,11 +13,16 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
+        // Create a single test user
+        User::create([
             'name' => 'Test User',
-            'email' => 'test@example.com',
+            'phone_number' => '01700000000', // Must be unique
+            'experiment_tag' => 'onboarding_test',
+            'user_type' => 'user',
+            'remember_token' => Str::random(10),
         ]);
+
+        // Optionally create more users with factory:
+        // User::factory(10)->create();
     }
 }
