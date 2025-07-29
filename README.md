@@ -1,5 +1,7 @@
 # Manush-E Backend
 
+[![codecov](https://codecov.io/github/Moner-Bondhu/manush-e-backend/graph/badge.svg?token=BZDFKB6KIT)](https://codecov.io/github/Moner-Bondhu/manush-e-backend)
+
 This is the backend API service built with Laravel for Manush-E. It powers the core logic and data operations for the application.
 
 ## 🚀 Requirements
