@@ -2,8 +2,6 @@
 
 Thank you for considering contributing to the Manush-E backend API! Your help is deeply appreciated — whether it’s bug fixes, feature improvements, or documentation updates.
 
-[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
-
 ---
 
 ## 📌 How to Contribute
@@ -86,5 +84,3 @@ By submitting a contribution, you affirm that you have the right to, and do, lic
 Look for issues labeled good first issue or help wanted
 
 You can also reach out via email at [info@monerbondhu.com](mailto:info@monerbondhu.com)
-
-This guide incorporates the [Contributor Covenant](https://www.contributor-covenant.org), version 2.1, and is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0).
