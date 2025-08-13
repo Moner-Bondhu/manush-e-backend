@@ -2,8 +2,6 @@
 
 Thank you for considering contributing to the Manush-E backend API! Your help is deeply appreciated — whether it’s bug fixes, feature improvements, or documentation updates.
 
-[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-4baaaa.svg)](CODE_OF_CONDUCT.md)
-
 ---
 
 ## 📌 How to Contribute
@@ -79,12 +77,10 @@ phpdbg -qrr ./vendor/bin/phpunit --coverage-html coverage
 By submitting a contribution, you affirm that you have the right to, and do, license your contribution under the project’s open source license.
 
 ## 🧠 Code of Conduct
-* We follow the Contributor Covenant Code of Conduct.
+* Please check our [Code of Conduct](https://manush-e-docs.monerbondhu.com/code-of-conduct/) documentation before interacting with our repositories.
 * All interactions should be respectful and inclusive.
 
 ## 🙌 Need Help?
 Look for issues labeled good first issue or help wanted
 
 You can also reach out via email at [info@monerbondhu.com](mailto:info@monerbondhu.com)
-
-This guide incorporates the [Contributor Covenant](https://www.contributor-covenant.org), version 2.1, and is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0).
