@@ -79,7 +79,7 @@ phpdbg -qrr ./vendor/bin/phpunit --coverage-html coverage
 By submitting a contribution, you affirm that you have the right to, and do, license your contribution under the project’s open source license.
 
 ## 🧠 Code of Conduct
-* We follow the Contributor Covenant Code of Conduct.
+* Please check our [Code of Conduct](https://manush-e-docs.monerbondhu.com/code-of-conduct/) documentation before interacting with our repositories.
 * All interactions should be respectful and inclusive.
 
 ## 🙌 Need Help?
