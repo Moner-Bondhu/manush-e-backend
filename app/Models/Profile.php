@@ -58,4 +58,14 @@ class Profile extends Model
 	{
 		return $this->hasMany(Response::class);
 	}
+
+    public function gameSessions()
+    {
+        return $this->hasMany(GameSession::class);
+    }
+
+    public function featureSnapshots()
+    {
+        return $this->hasMany(ChildFeatureSnapshot::class);
+    }
 }
