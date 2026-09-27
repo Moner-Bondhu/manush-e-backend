@@ -15,7 +15,7 @@ class PortalController extends BaseController
     {
         $child = $request->user()->assignedProfiles()->wherePivot('role', 'parent')->where('type', 'child')->first()
             ?? $request->user()->profiles()->where('type', 'child')->firstOrFail();
-        return $this->sendResponse('fetched', $this->profileSummary($child));
+        return $this->sendResponse('fetched', $this->profileSummary($child, 'parent'));
     }
 
     public function teacherOverview(Request $request)
@@ -26,11 +26,11 @@ class PortalController extends BaseController
             'id' => $group->id,
             'name' => $group->name,
             'school_name' => $group->school_name,
-            'students' => $group->profiles->map(fn ($profile) => $this->profileSummary($profile)),
+            'students' => $group->profiles->map(fn ($profile) => $this->profileSummary($profile, 'teacher')),
         ]));
     }
 
-    private function profileSummary($profile): array
+    private function profileSummary($profile, string $audience): array
     {
         $scales = Scale::where('visible_to', 'child')->withCount('questions')->get()->map(function ($scale) use ($profile) {
             $responses = Response::where('profile_id', $profile->id)->whereIn('question_id', $scale->questions()->pluck('id'))->count();
@@ -53,6 +53,57 @@ class PortalController extends BaseController
                     ])->values(),
                 ])->values(),
             'activities' => $scales->values(),
+            'assigned_tasks' => $this->taskFeed($profile, $audience),
+            'personalization' => $this->personalization($profile, $audience),
+        ];
+    }
+
+    private function taskFeed($profile, string $audience)
+    {
+        return Scale::where('visible_to', $audience)->where('is_published', true)->whereNotNull('code')
+            ->withCount('questions')->orderBy('name')->get()->map(function ($scale) use ($profile) {
+                $responses = Response::where('profile_id', $profile->id)
+                    ->whereIn('question_id', $scale->questions()->pluck('id'))->count();
+                return [
+                    'id' => $scale->id,
+                    'name' => $scale->name,
+                    'description' => $scale->description,
+                    'responses' => $responses,
+                    'total' => $scale->questions_count,
+                    'status' => $responses >= $scale->questions_count ? 'complete' : ($responses > 0 ? 'in_progress' : 'ready'),
+                ];
+            })->values();
+    }
+
+    private function personalization($profile, string $audience): array
+    {
+        $details = $profile->details ?? [];
+        $interests = array_values((array) ($details['interests'] ?? []));
+        $expression = array_values((array) ($details['expression_preferences'] ?? []));
+
+        if ($audience === 'parent') {
+            return [
+                'interests' => $interests,
+                'support_ideas' => [
+                    'Connect one home activity each week to '.($interests[0] ?? 'a current interest').'.',
+                    'Offer a choice between '.($expression[0] ?? 'talking').' and '.($expression[1] ?? 'drawing or making').' when sharing an idea.',
+                    'Use a short, predictable start-and-finish routine for home learning.',
+                ],
+                'permission_note' => 'Family view shows practical supports and participation, not clinical interpretation.',
+            ];
+        }
+
+        return [
+            'academic_strengths' => array_values((array) ($details['strong_subjects'] ?? [])),
+            'support_subjects' => array_values((array) ($details['support_subjects'] ?? [])),
+            'interests' => $interests,
+            'expression_preferences' => $expression,
+            'teaching_ideas' => [
+                'Keep the same learning objective and offer '.($expression[0] ?? 'a visual or verbal').' entry point.',
+                'Connect examples to '.($interests[0] ?? 'the student’s current interests').' before independent practice.',
+                'Use a short check for understanding, then adjust task steps rather than lowering the goal.',
+            ],
+            'permission_note' => 'Teacher view supports pedagogy and academic planning; expert-only interpretation is not shown.',
         ];
     }
 
