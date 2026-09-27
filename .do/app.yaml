@@ -106,5 +106,3 @@ databases:
     engine: PG
     version: "17"
     production: false
-    db_name: manushe
-    db_user: manushe
