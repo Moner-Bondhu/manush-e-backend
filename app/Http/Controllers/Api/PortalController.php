@@ -13,7 +13,8 @@ class PortalController extends BaseController
 {
     public function parentOverview(Request $request)
     {
-        $child = $request->user()->profiles()->where('type', 'child')->firstOrFail();
+        $child = $request->user()->assignedProfiles()->wherePivot('role', 'parent')->where('type', 'child')->first()
+            ?? $request->user()->profiles()->where('type', 'child')->firstOrFail();
         return $this->sendResponse('fetched', $this->profileSummary($child));
     }
 

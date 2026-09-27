@@ -51,7 +51,8 @@ class ScaleController extends BaseController
             $requestedProfileId = $request->query('profile_id');
             $selectedProfile = $requestedProfileId !== null
                 ? Profile::findOrFail((int) $requestedProfileId)
-                : Profile::where('user_id', $user->id)->where('type', $profile)->firstOrFail();
+                : ($user->profiles()->where('type', $profile)->first()
+                    ?? $user->assignedProfiles()->where('type', $profile)->firstOrFail());
             $this->authorizeProfile($request, $selectedProfile);
             $profile_id = $selectedProfile->id;
 
@@ -131,8 +132,9 @@ class ScaleController extends BaseController
     {
         $user = $request->user();
         $owns = $user->profiles()->whereKey($profile->id)->exists();
+        $assigned = $user->assignedProfiles()->whereKey($profile->id)->exists();
         $teaches = LearningGroup::where('teacher_user_id', $user->id)
             ->whereHas('profiles', fn ($query) => $query->whereKey($profile->id))->exists();
-        abort_unless($owns || $teaches || $user->user_type === 'admin', 403);
+        abort_unless($owns || $assigned || $teaches || $user->user_type === 'admin', 403);
     }
 }

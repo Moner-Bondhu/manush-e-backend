@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\Demography;
-use App\Models\ExperienceBlueprint;
 use App\Models\GameDefinition;
 use App\Models\GameLevel;
 use App\Models\LearningGroup;
@@ -235,31 +234,6 @@ class LocalDemoSeeder extends Seeder
             ['school_name' => 'Demo School']
         );
         $group->profiles()->syncWithoutDetaching([$child->id]);
-
-        $blueprint = ExperienceBlueprint::updateOrCreate(
-            ['teacher_user_id' => $teacher->id, 'title' => 'Fraction Confidence Journey'],
-            [
-                'learning_group_id' => $group->id,
-                'subject' => 'Mathematics',
-                'grade_band' => 'Grade 5',
-                'focus_area' => 'confidence and visual reasoning',
-                'objective' => 'Students will use visual fraction strategies, explain their reasoning, and persist through multi-step problems.',
-                'duration_weeks' => 6,
-                'language' => 'en',
-                'status' => 'draft',
-                'success_criteria' => [
-                    'Students explain one visual fraction strategy.',
-                    'Students complete a multi-step problem with an appropriate support.',
-                    'Teachers identify a useful next challenge for each learner.',
-                ],
-            ]
-        );
-        $blueprint->blocks()->delete();
-        $blueprint->blocks()->createMany([
-            ['week_number' => 1, 'sort_order' => 1, 'block_type' => 'learn', 'title' => 'Fraction city', 'description' => 'Build a small visual world from fraction pieces.', 'student_prompt' => 'Choose a way to show one half, one quarter, and three quarters.', 'teacher_note' => 'Notice which visual supports help students begin.', 'duration_minutes' => 35, 'personalization' => ['format' => 'tiles, drawing, or partner talk']],
-            ['week_number' => 3, 'sort_order' => 2, 'block_type' => 'play', 'title' => 'Market mission', 'description' => 'Solve a practical fraction challenge using a choice of strategies.', 'student_prompt' => 'Pick a strategy, try it, then explain what changed.', 'teacher_note' => 'Offer a small-group visual model where needed.', 'duration_minutes' => 40, 'personalization' => ['difficulty' => 'adjust after first attempt']],
-            ['week_number' => 6, 'sort_order' => 3, 'block_type' => 'create', 'title' => 'Teach the strategy', 'description' => 'Create a short explanation that helps another learner use a fraction strategy.', 'student_prompt' => 'Show one strategy you can now use and when it helps.', 'teacher_note' => 'Use work samples and reflection to decide the next pathway.', 'duration_minutes' => 45, 'personalization' => ['product' => 'poster, recording, or demonstration']],
-        ]);
 
     }
 }

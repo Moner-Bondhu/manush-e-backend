@@ -31,11 +31,13 @@ class ResponseController extends BaseController
             $scale = $question->scale;
             $profile = $request->filled('profile_id')
                 ? Profile::findOrFail($request->integer('profile_id'))
-                : $user->profiles->where('type', $scale->visible_to)->firstOrFail();
+                : ($user->profiles()->where('type', $scale->visible_to)->first()
+                    ?? $user->assignedProfiles()->where('type', $scale->visible_to)->firstOrFail());
             $owns = $user->profiles()->whereKey($profile->id)->exists();
+            $assigned = $user->assignedProfiles()->whereKey($profile->id)->exists();
             $teaches = LearningGroup::where('teacher_user_id', $user->id)
                 ->whereHas('profiles', fn ($query) => $query->whereKey($profile->id))->exists();
-            abort_unless($owns || $teaches || $user->user_type === 'admin', 403);
+            abort_unless($owns || $assigned || $teaches || $user->user_type === 'admin', 403);
 
             $response = Response::where('profile_id', $profile->id)->where('question_id', $question_id)->first();
 

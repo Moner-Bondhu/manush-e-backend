@@ -20,6 +20,7 @@ class UserResource extends JsonResource
             'phone_number' => $this->phone_number,
             'experiment_tag' => $this->experiment_tag,
             'user_type' => $this->user_type,
+            'portal_role' => $this->portal_role,
             'is_onboarded' => $this->is_onboarded,
             'profiles' => ProfileResource::collection($this->whenLoaded('profiles')),
             'created_at' => $this->created_at,

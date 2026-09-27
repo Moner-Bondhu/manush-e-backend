@@ -32,7 +32,7 @@ class AuthController extends BaseController
                 return $this->sendError('validation_error', $validator->errors(), 401);
             }
 
-            if ($this->demoEnabled() && $phoneNumber !== config('auth.demo.phone_number')) {
+            if ($this->demoEnabled() && ! $this->demoPhoneAllowed($phoneNumber)) {
                 return $this->sendError('demo_phone_required', __('auth.failed'), 403);
             }
 
@@ -96,7 +96,7 @@ class AuthController extends BaseController
             } else {
                 return $this->sendError('validation_error', __('auth.failed'), 401);
             }
-            if ($this->demoEnabled() && $phoneNumber !== config('auth.demo.phone_number')) {
+            if ($this->demoEnabled() && ! $this->demoPhoneAllowed($phoneNumber)) {
                 return $this->sendError('demo_phone_required', __('auth.failed'), 403);
             }
             $validator = Validator::make($request->all(), [
@@ -136,7 +136,17 @@ class AuthController extends BaseController
     private function demoEnabled(): bool
     {
         return config('auth.demo.enabled')
-            && filled(config('auth.demo.phone_number'))
+            && count($this->demoPhones()) > 0
             && preg_match('/^\d{4}$/', (string) config('auth.demo.otp')) === 1;
+    }
+
+    private function demoPhoneAllowed(string $phoneNumber): bool
+    {
+        return in_array($phoneNumber, $this->demoPhones(), true);
+    }
+
+    private function demoPhones(): array
+    {
+        return config('auth.demo.phone_numbers') ?: array_filter([config('auth.demo.phone_number')]);
     }
 }

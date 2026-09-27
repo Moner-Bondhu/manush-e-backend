@@ -44,6 +44,7 @@ class User extends Authenticatable
 		'phone_number',
 		'experiment_tag',
 		'user_type',
+		'portal_role',
 		'remember_token',
 		'is_onboarded',
 		'professional_details',
@@ -73,4 +74,15 @@ class User extends Authenticatable
 	{
 		return $this->hasMany(Profile::class);
 	}
+
+    public function profileAssignments()
+    {
+        return $this->hasMany(ProfileUserAssignment::class);
+    }
+
+    public function assignedProfiles()
+    {
+        return $this->belongsToMany(Profile::class, 'profile_user_assignments')
+            ->withPivot(['role', 'relationship', 'is_primary']);
+    }
 }

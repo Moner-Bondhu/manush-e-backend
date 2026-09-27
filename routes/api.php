@@ -6,14 +6,16 @@ use App\Http\Controllers\Api\GameController;
 use App\Http\Controllers\Api\DevelopmentProfileController;
 use App\Http\Controllers\Api\PortalController;
 use App\Http\Controllers\Api\ScenarioCoachController;
-use App\Http\Controllers\Api\ExperienceBlueprintController;
 use App\Http\Controllers\Api\ResponseController;
 use App\Http\Controllers\Api\ScaleController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ProfileSetupController;
+use App\Http\Controllers\Api\AccountOnboardingController;
 
 Route::get('/user', [UserController::class, 'get_user'])->middleware('auth:sanctum');
 Route::post('/user/onboard', [UserController::class, 'complete_onboard'])->middleware('auth:sanctum');
+Route::get('/account-onboarding', [AccountOnboardingController::class, 'context'])->middleware('auth:sanctum');
+Route::post('/account-onboarding', [AccountOnboardingController::class, 'complete'])->middleware('auth:sanctum');
 
 Route::post('/login', [AuthController::class, 'generate_otp']);
 Route::post('/otp', [AuthController::class, 'login_with_otp']);
@@ -35,7 +37,3 @@ Route::get('/profiles/{profile}/development', [DevelopmentProfileController::cla
 Route::get('/portal/parent', [PortalController::class, 'parentOverview'])->middleware('auth:sanctum');
 Route::get('/portal/teacher', [PortalController::class, 'teacherOverview'])->middleware('auth:sanctum');
 Route::post('/scenario-coach/respond', [ScenarioCoachController::class, 'respond'])->middleware('auth:sanctum');
-Route::get('/experience-blueprints', [ExperienceBlueprintController::class, 'index'])->middleware('auth:sanctum');
-Route::post('/experience-blueprints', [ExperienceBlueprintController::class, 'store'])->middleware('auth:sanctum');
-Route::post('/experience-blueprints/assist', [ExperienceBlueprintController::class, 'assist'])->middleware('auth:sanctum');
-Route::post('/experience-blueprints/{experienceBlueprint}/publish', [ExperienceBlueprintController::class, 'publish'])->middleware('auth:sanctum');

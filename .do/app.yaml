@@ -93,6 +93,9 @@ services:
       - key: AUTH_DEMO_PHONE_NUMBER
         value: "+8801700000000"
         scope: RUN_TIME
+      - key: AUTH_DEMO_PHONE_NUMBERS
+        value: "+8801700000000,+8801700000011,+8801700000021"
+        scope: RUN_TIME
       - key: AUTH_DEMO_OTP
         value: REPLACE_IN_DIGITALOCEAN
         scope: RUN_TIME

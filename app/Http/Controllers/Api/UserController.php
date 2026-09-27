@@ -19,7 +19,9 @@ class UserController extends BaseController
                 return $this->sendError('not_found', __('user.not_found'), 404);
             }
 
-            return $this->sendResponse('fetched', new UserResource($request->user()->load('profiles')));
+            $user = $request->user()->load(['profiles', 'assignedProfiles']);
+            $user->setRelation('profiles', $user->profiles->merge($user->assignedProfiles)->unique('id')->values());
+            return $this->sendResponse('fetched', new UserResource($user));
         }
         catch (\Throwable $th) {
             return $this->sendError('server_error', $th->getMessage() . ' on ' . $th->getLine(), 500);

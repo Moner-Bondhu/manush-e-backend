@@ -12,10 +12,11 @@ class DevelopmentProfileController extends BaseController
     {
         $user = $request->user();
         $ownsProfile = $user->profiles()->whereKey($profile->id)->exists();
+        $assignedProfile = $user->assignedProfiles()->whereKey($profile->id)->exists();
         $teachesProfile = LearningGroup::where('teacher_user_id', $user->id)
             ->whereHas('profiles', fn ($query) => $query->whereKey($profile->id))
             ->exists();
-        abort_unless($ownsProfile || $teachesProfile || $user->user_type === 'admin', 403);
+        abort_unless($ownsProfile || $assignedProfile || $teachesProfile || $user->user_type === 'admin', 403);
 
         $features = $profile->featureSnapshots()->latest('measured_at')->get()
             ->groupBy('domain')

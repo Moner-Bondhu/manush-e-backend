@@ -6,6 +6,7 @@ use App\Models\ChildFeatureSnapshot;
 use App\Models\Demography;
 use App\Models\LearningGroup;
 use App\Models\Profile;
+use App\Models\ProfileUserAssignment;
 use App\Models\Response;
 use App\Models\Scale;
 use App\Models\User;
@@ -25,6 +26,7 @@ class DemoSchoolSeeder extends Seeder
                     'name' => 'Ms. Farhana Rahman',
                     'experiment_tag' => 'demo_school',
                     'user_type' => 'teacher',
+                    'portal_role' => 'teacher',
                     'is_onboarded' => true,
                     'professional_details' => $this->teacherDetails(),
                 ]
@@ -46,7 +48,7 @@ class DemoSchoolSeeder extends Seeder
             foreach ($students as $index => $student) {
                 $family = User::updateOrCreate(
                     ['phone_number' => $student['phone']],
-                    ['name' => $student['parent'], 'experiment_tag' => 'demo_school', 'user_type' => 'user', 'is_onboarded' => true]
+                    ['name' => $student['parent'], 'experiment_tag' => 'demo_school', 'user_type' => 'user', 'portal_role' => 'parent', 'is_onboarded' => true]
                 );
                 $child = Profile::updateOrCreate(
                     ['user_id' => $family->id, 'type' => 'child'],
@@ -58,12 +60,25 @@ class DemoSchoolSeeder extends Seeder
                 );
                 Demography::updateOrCreate(['profile_id' => $child->id], ['dob' => $student['dob'], 'gender' => $student['gender'], 'grade' => '5']);
                 Demography::updateOrCreate(['profile_id' => $parent->id], ['dob' => '1988-01-01', 'gender' => 'other', 'grade' => 'N/A']);
+                ProfileUserAssignment::updateOrCreate(
+                    ['profile_id' => $child->id, 'user_id' => $family->id, 'role' => 'parent'],
+                    ['relationship' => $index % 2 ? 'mother' : 'guardian', 'is_primary' => true]
+                );
                 $profileIds[] = $child->id;
 
                 if ($student['complete']) {
                     $this->seedEvidence($child, $index);
                 }
             }
+
+            $studentLogin = User::updateOrCreate(
+                ['phone_number' => '+8801700000021'],
+                ['name' => 'Aarav Sen', 'experiment_tag' => 'demo_school', 'user_type' => 'user', 'portal_role' => 'student', 'is_onboarded' => true]
+            );
+            ProfileUserAssignment::updateOrCreate(
+                ['profile_id' => $profileIds[0], 'user_id' => $studentLogin->id, 'role' => 'student'],
+                ['relationship' => 'self', 'is_primary' => true]
+            );
 
             $group->profiles()->sync($profileIds);
         });

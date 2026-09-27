@@ -75,4 +75,9 @@ class Profile extends Model
     {
         return $this->belongsToMany(LearningGroup::class, 'learning_group_profiles');
     }
+
+    public function userAssignments()
+    {
+        return $this->hasMany(ProfileUserAssignment::class);
+    }
 }

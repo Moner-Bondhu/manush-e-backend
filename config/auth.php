@@ -115,6 +115,7 @@ return [
     'demo' => [
         'enabled' => env('AUTH_DEMO_ENABLED', false),
         'phone_number' => env('AUTH_DEMO_PHONE_NUMBER'),
+        'phone_numbers' => array_values(array_filter(array_map('trim', explode(',', env('AUTH_DEMO_PHONE_NUMBERS', ''))))),
         'otp' => env('AUTH_DEMO_OTP'),
     ],
 
