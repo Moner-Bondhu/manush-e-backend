@@ -112,4 +112,10 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    'demo' => [
+        'enabled' => env('AUTH_DEMO_ENABLED', false),
+        'phone_number' => env('AUTH_DEMO_PHONE_NUMBER'),
+        'otp' => env('AUTH_DEMO_OTP'),
+    ],
+
 ];

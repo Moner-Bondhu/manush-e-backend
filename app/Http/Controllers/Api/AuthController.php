@@ -32,10 +32,27 @@ class AuthController extends BaseController
                 return $this->sendError('validation_error', $validator->errors(), 401);
             }
 
+            if ($this->demoEnabled() && $phoneNumber !== config('auth.demo.phone_number')) {
+                return $this->sendError('demo_phone_required', __('auth.failed'), 403);
+            }
+
             if (!$user) {
                 $user = User::factory()->create([
                     'phone_number' => $phoneNumber,
                 ]);
+            }
+
+            if ($this->demoEnabled()) {
+                $user->otps()->update(['is_valid' => false]);
+                Otp::create([
+                    'user_id' => $user->id,
+                    'otp' => config('auth.demo.otp'),
+                    'is_valid' => true,
+                    'attempts_left' => 5,
+                    'expires_at' => Carbon::now()->addMinutes(30),
+                ]);
+
+                return $this->sendResponse('generated', __('auth.otp_generated'));
             }
 
             $otp = $user->get_valid_otp();
@@ -74,6 +91,9 @@ class AuthController extends BaseController
             } else {
                 return $this->sendError('validation_error', __('auth.failed'), 401);
             }
+            if ($this->demoEnabled() && $phoneNumber !== config('auth.demo.phone_number')) {
+                return $this->sendError('demo_phone_required', __('auth.failed'), 403);
+            }
             $validator = Validator::make($request->all(), [
                 'otp' => 'required|integer|digits:4'
             ]);
@@ -106,5 +126,12 @@ class AuthController extends BaseController
         catch (\Throwable $th) {
             return $this->sendError('server_error', $th->getMessage() . ' on ' . $th->getLine(), 500);
         }
+    }
+
+    private function demoEnabled(): bool
+    {
+        return config('auth.demo.enabled')
+            && filled(config('auth.demo.phone_number'))
+            && preg_match('/^\d{4}$/', (string) config('auth.demo.otp')) === 1;
     }
 }

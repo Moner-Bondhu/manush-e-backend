@@ -87,6 +87,16 @@ services:
       - key: RUN_MIGRATIONS
         value: "true"
         scope: RUN_TIME
+      - key: AUTH_DEMO_ENABLED
+        value: "true"
+        scope: RUN_TIME
+      - key: AUTH_DEMO_PHONE_NUMBER
+        value: "+8801700000000"
+        scope: RUN_TIME
+      - key: AUTH_DEMO_OTP
+        value: REPLACE_IN_DIGITALOCEAN
+        scope: RUN_TIME
+        type: SECRET
 
 static_sites:
   - name: web
@@ -100,6 +110,15 @@ static_sites:
     envs:
       - key: VITE_API_ENDPOINT
         value: /api
+        scope: BUILD_TIME
+      - key: VITE_DEMO_AUTH_ENABLED
+        value: "true"
+        scope: BUILD_TIME
+      - key: VITE_DEMO_PHONE_NUMBER
+        value: "01700000000"
+        scope: BUILD_TIME
+      - key: VITE_DEMO_OTP
+        value: "2580"
         scope: BUILD_TIME
 
 databases:
