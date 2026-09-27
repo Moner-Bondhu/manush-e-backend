@@ -8,6 +8,8 @@ use App\Models\GameDefinition;
 use App\Models\GameEvent;
 use App\Models\GameSession;
 use App\Models\GameProgress;
+use App\Models\LearningGroup;
+use App\Models\Profile;
 use Illuminate\Http\Request;
 
 class GameController extends BaseController
@@ -17,7 +19,7 @@ class GameController extends BaseController
         $data = $request->validate(['profile_id' => ['nullable', 'integer', 'exists:profiles,id']]);
         $profileId = $data['profile_id'] ?? null;
         if ($profileId) {
-            $request->user()->profiles()->findOrFail($profileId);
+            $this->authorizeProfile($request, Profile::findOrFail($profileId));
         }
         $games = GameDefinition::where('status', 'published')
             ->orderBy('sort_order')
@@ -37,7 +39,8 @@ class GameController extends BaseController
     {
         abort_unless($game->status === 'published', 404);
         $data = $request->validate(['profile_id' => ['required', 'integer', 'exists:profiles,id']]);
-        $profile = $request->user()->profiles()->findOrFail($data['profile_id']);
+        $profile = Profile::findOrFail($data['profile_id']);
+        $this->authorizeProfile($request, $profile);
 
         [$progress, $level] = app(GameProgressionService::class)->start($game, $profile->id);
         abort_unless($level, 422, 'This game has no configured levels.');
@@ -55,7 +58,8 @@ class GameController extends BaseController
 
     public function complete(Request $request, GameSession $gameSession)
     {
-        $profile = $request->user()->profiles()->findOrFail($gameSession->profile_id);
+        $profile = Profile::findOrFail($gameSession->profile_id);
+        $this->authorizeProfile($request, $profile);
         abort_unless($profile->id === $gameSession->profile_id, 403);
         $data = $request->validate([
             'duration_ms' => ['required', 'integer', 'min:0', 'max:3600000'],
@@ -79,7 +83,7 @@ class GameController extends BaseController
 
     public function recordEvents(Request $request, GameSession $gameSession)
     {
-        $request->user()->profiles()->findOrFail($gameSession->profile_id);
+        $this->authorizeProfile($request, Profile::findOrFail($gameSession->profile_id));
         abort_if($gameSession->status !== 'in_progress', 409, 'Events can only be recorded during an active session.');
         $data = $request->validate([
             'events' => ['required', 'array', 'min:1', 'max:100'],
@@ -99,6 +103,15 @@ class GameController extends BaseController
         GameEvent::insert($events);
 
         return $this->sendResponse('recorded', ['count' => count($events)]);
+    }
+
+    private function authorizeProfile(Request $request, Profile $profile): void
+    {
+        $user = $request->user();
+        $owns = $user->profiles()->whereKey($profile->id)->exists();
+        $teaches = LearningGroup::where('teacher_user_id', $user->id)
+            ->whereHas('profiles', fn ($query) => $query->whereKey($profile->id))->exists();
+        abort_unless($owns || $teaches || $user->user_type === 'admin', 403);
     }
 
 }

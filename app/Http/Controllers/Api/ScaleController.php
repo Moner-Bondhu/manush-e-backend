@@ -6,6 +6,7 @@ use App\Http\Resources\ScaleResource;
 use App\Models\Profile;
 use App\Models\Response;
 use App\Models\Scale;
+use App\Models\LearningGroup;
 use Illuminate\Http\Request;
 
 class ScaleController extends BaseController
@@ -47,7 +48,11 @@ class ScaleController extends BaseController
                 ->whereNotNull('code')
                 ->get();
             $user = $request->user();
-            $profile_id = $user->profiles->where('type', $profile)->first()->id;
+            $selectedProfile = $request->filled('profile_id')
+                ? Profile::findOrFail($request->integer('profile_id'))
+                : $user->profiles->where('type', $profile)->firstOrFail();
+            $this->authorizeProfile($request, $selectedProfile);
+            $profile_id = $selectedProfile->id;
 
             // Transform the scales collection to include custom data
             $scales = $scales->map(function ($scale) use ($profile_id) {
@@ -93,8 +98,10 @@ class ScaleController extends BaseController
      */
     public function show(Request $request, $scale_id)
     {
-        //
         try {
+            if ($request->filled('profile_id')) {
+                $this->authorizeProfile($request, Profile::findOrFail($request->integer('profile_id')));
+            }
             $scale = new ScaleResource(Scale::find($scale_id)->load('questions.options'));
             return $this->sendResponse('fetched', $scale);
         } catch (\Throwable $th) {
@@ -117,5 +124,14 @@ class ScaleController extends BaseController
     public function destroy(Scale $scale)
     {
         //
+    }
+
+    private function authorizeProfile(Request $request, Profile $profile): void
+    {
+        $user = $request->user();
+        $owns = $user->profiles()->whereKey($profile->id)->exists();
+        $teaches = LearningGroup::where('teacher_user_id', $user->id)
+            ->whereHas('profiles', fn ($query) => $query->whereKey($profile->id))->exists();
+        abort_unless($owns || $teaches || $user->user_type === 'admin', 403);
     }
 }
