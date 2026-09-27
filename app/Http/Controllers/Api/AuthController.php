@@ -37,7 +37,8 @@ class AuthController extends BaseController
             }
 
             if (!$user) {
-                $user = User::factory()->create([
+                $user = User::create([
+                    'name' => 'Manush-E User',
                     'phone_number' => $phoneNumber,
                 ]);
             }
@@ -58,8 +59,12 @@ class AuthController extends BaseController
             $otp = $user->get_valid_otp();
 
             if (!$otp) {
-                $otp = Otp::factory()->create([
-                    'user_id' => $user->id
+                $otp = Otp::create([
+                    'user_id' => $user->id,
+                    'otp' => (string) random_int(1000, 9999),
+                    'is_valid' => true,
+                    'attempts_left' => 5,
+                    'expires_at' => Carbon::now()->addMinutes(5),
                 ]);
 
                 if ($user->phone_number) {
