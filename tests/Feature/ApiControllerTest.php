@@ -9,6 +9,7 @@ use App\Models\Question;
 use App\Models\Response;
 use App\Models\Scale;
 use App\Models\User;
+use Database\Seeders\MeasurementLibrarySeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -16,6 +17,23 @@ use Tests\TestCase;
 class ApiControllerTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_authenticated_user_can_view_measurement_library_metadata()
+    {
+        $this->seed(MeasurementLibrarySeeder::class);
+        Sanctum::actingAs(User::factory()->create());
+
+        $response = $this->getJson('/api/assessment-library');
+
+        $response->assertOk()
+            ->assertJsonPath('data.summary.packs', 9)
+            ->assertJsonPath('data.summary.questions', 45)
+            ->assertJsonFragment([
+                'code' => 'CHILD-WELLBEING-PULSE',
+                'domain' => 'mental_wellbeing',
+                'instrument_status' => 'original_research_informed',
+            ]);
+    }
 
     public function test_authenticated_user_can_fetch_self()
     {

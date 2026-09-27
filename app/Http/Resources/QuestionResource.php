@@ -20,6 +20,8 @@ class QuestionResource extends JsonResource
             'subtext' => $this->subtext,
             'image' => $this->image,
             'type' => $this->type,
+            'construct' => $this->construct,
+            'reverse_scored' => $this->reverse_scored,
             'order' => $this->order,
             'scale' => new ScaleResource($this->whenLoaded('scale')),
             'options' => OptionResource::collection($this->whenLoaded('options'))

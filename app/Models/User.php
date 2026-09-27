@@ -45,11 +45,13 @@ class User extends Authenticatable
 		'experiment_tag',
 		'user_type',
 		'remember_token',
-        'is_onboarded'
+		'is_onboarded',
+		'professional_details',
 	];
 
     protected $casts = [
-		'is_onboarded' => 'bool'
+		'is_onboarded' => 'bool',
+		'professional_details' => 'array',
 	];
 
 	public function otps()

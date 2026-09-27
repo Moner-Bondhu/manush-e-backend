@@ -10,6 +10,31 @@ use Illuminate\Http\Request;
 
 class ScaleController extends BaseController
 {
+    public function library(Request $request)
+    {
+        $audience = $request->query('audience');
+        $scales = Scale::query()
+            ->where('is_published', true)
+            ->when($audience, fn ($query) => $query->where('visible_to', $audience))
+            ->withCount('questions')
+            ->orderBy('domain')
+            ->orderBy('name')
+            ->get();
+
+        return $this->sendResponse('fetched', [
+            'summary' => [
+                'packs' => $scales->count(),
+                'questions' => $scales->sum('questions_count'),
+                'domains' => $scales->pluck('domain')->unique()->values()->count(),
+                'audiences' => $scales->pluck('visible_to')->unique()->values(),
+            ],
+            'domains' => $scales->groupBy('domain')->map(fn ($items, $domain) => [
+                'domain' => $domain,
+                'packs' => $items->values(),
+            ])->values(),
+        ]);
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -17,7 +42,10 @@ class ScaleController extends BaseController
     {
         try {
             // Fetch all scales visible to the profile
-            $scales = Scale::where('visible_to', $profile)->get();
+            $scales = Scale::where('visible_to', $profile)
+                ->where('is_published', true)
+                ->whereNotNull('code')
+                ->get();
             $user = $request->user();
             $profile_id = $user->profiles->where('type', $profile)->first()->id;
 

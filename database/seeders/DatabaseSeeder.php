@@ -13,6 +13,8 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $this->call(MeasurementLibrarySeeder::class);
+
         // Create a single test user
         User::create([
             'name' => 'Test User',

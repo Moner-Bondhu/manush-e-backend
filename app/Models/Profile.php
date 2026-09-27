@@ -34,14 +34,16 @@ class Profile extends Model
 	protected $table = 'profiles';
 
 	protected $casts = [
-		'user_id' => 'int'
+		'user_id' => 'int',
+		'details' => 'array',
 	];
 
 	protected $fillable = [
 		'user_id',
 		'type',
 		'full_name',
-        'relation_type'
+        'relation_type',
+        'details',
 	];
 
 	public function user()
@@ -67,5 +69,10 @@ class Profile extends Model
     public function featureSnapshots()
     {
         return $this->hasMany(ChildFeatureSnapshot::class);
+    }
+
+    public function learningGroups()
+    {
+        return $this->belongsToMany(LearningGroup::class, 'learning_group_profiles');
     }
 }

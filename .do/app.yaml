@@ -1,0 +1,110 @@
+name: manush-e-preview
+region: sgp
+
+alerts:
+  - rule: DEPLOYMENT_FAILED
+  - rule: DOMAIN_FAILED
+
+ingress:
+  rules:
+    - component:
+        name: api
+      match:
+        path:
+          prefix: /up
+    - component:
+        name: api
+      match:
+        path:
+          prefix: /api
+    - component:
+        name: web
+      match:
+        path:
+          prefix: /
+
+services:
+  - name: api
+    github:
+      repo: dpaul0501/manush-e-backend
+      branch: main
+      deploy_on_push: true
+    dockerfile_path: Dockerfile
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    liveness_health_check:
+      http_path: /up
+    envs:
+      - key: APP_NAME
+        value: Manush-E
+        scope: RUN_TIME
+      - key: APP_ENV
+        value: production
+        scope: RUN_TIME
+      - key: APP_DEBUG
+        value: "false"
+        scope: RUN_TIME
+      - key: APP_KEY
+        value: REPLACE_IN_DIGITALOCEAN
+        scope: RUN_TIME
+        type: SECRET
+      - key: LOG_CHANNEL
+        value: stderr
+        scope: RUN_TIME
+      - key: DB_CONNECTION
+        value: pgsql
+        scope: RUN_TIME
+      - key: DB_HOST
+        value: ${manushe-db.HOSTNAME}
+        scope: RUN_TIME
+      - key: DB_PORT
+        value: ${manushe-db.PORT}
+        scope: RUN_TIME
+      - key: DB_DATABASE
+        value: ${manushe-db.DATABASE}
+        scope: RUN_TIME
+      - key: DB_USERNAME
+        value: ${manushe-db.USERNAME}
+        scope: RUN_TIME
+      - key: DB_PASSWORD
+        value: ${manushe-db.PASSWORD}
+        scope: RUN_TIME
+        type: SECRET
+      - key: DB_SSLMODE
+        value: require
+        scope: RUN_TIME
+      - key: CACHE_STORE
+        value: database
+        scope: RUN_TIME
+      - key: SESSION_DRIVER
+        value: database
+        scope: RUN_TIME
+      - key: QUEUE_CONNECTION
+        value: database
+        scope: RUN_TIME
+      - key: RUN_MIGRATIONS
+        value: "true"
+        scope: RUN_TIME
+
+static_sites:
+  - name: web
+    github:
+      repo: dpaul0501/manush-e-frontend
+      branch: main
+      deploy_on_push: true
+    build_command: npm ci && npm run build
+    output_dir: dist
+    error_document: index.html
+    envs:
+      - key: VITE_API_ENDPOINT
+        value: /api
+        scope: BUILD_TIME
+
+databases:
+  - name: manushe-db
+    engine: PG
+    version: "17"
+    production: false
+    db_name: manushe
+    db_user: manushe

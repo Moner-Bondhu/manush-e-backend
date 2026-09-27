@@ -32,9 +32,29 @@ class Scale extends Model
 	protected $table = 'scales';
 
 	protected $fillable = [
+		'code',
 		'name',
 		'description',
-		'visible_to'
+		'visible_to',
+		'domain',
+		'constructs',
+		'evidence_type',
+		'cadence',
+		'estimated_minutes',
+		'minimum_age',
+		'maximum_age',
+		'instrument_status',
+		'source_name',
+		'interpretation_note',
+		'is_published',
+	];
+
+	protected $casts = [
+		'constructs' => 'array',
+		'estimated_minutes' => 'integer',
+		'minimum_age' => 'integer',
+		'maximum_age' => 'integer',
+		'is_published' => 'boolean',
 	];
 
 	public function questions()

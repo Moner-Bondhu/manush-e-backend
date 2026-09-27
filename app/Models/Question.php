@@ -36,7 +36,8 @@ class Question extends Model
 
 	protected $casts = [
 		'scale_id' => 'int',
-		'order' => 'int'
+		'order' => 'int',
+		'reverse_scored' => 'boolean',
 	];
 
 	protected $fillable = [
@@ -45,6 +46,8 @@ class Question extends Model
 		'subtext',
 		'image',
 		'type',
+		'construct',
+		'reverse_scored',
 		'order'
 	];
 

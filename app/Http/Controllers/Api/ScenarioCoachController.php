@@ -31,7 +31,7 @@ class ScenarioCoachController extends BaseController
     {
         if (!env('GROQ_API_KEY2')) return null;
         $response = Http::withToken(env('GROQ_API_KEY2'))->post('https://api.groq.com/openai/v1/chat/completions', [
-            'model' => 'llama-3.3-70b-versatile', 'messages' => [['role' => 'user', 'content' => $prompt]], 'temperature' => 0.4,
+            'model' => 'openai/gpt-oss-20b', 'messages' => [['role' => 'user', 'content' => $prompt]], 'temperature' => 0.4,
         ]);
         return $response->successful() ? data_get($response->json(), 'choices.0.message.content') : null;
     }
