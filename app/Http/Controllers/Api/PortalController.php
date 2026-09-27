@@ -38,6 +38,7 @@ class PortalController extends BaseController
         return [
             'id' => $profile->id,
             'name' => $profile->full_name,
+            'profile_completion' => $this->profileCompletion($profile->details ?? []),
             'completed_activities' => $scales->where('complete', true)->count(),
             'total_activities' => $scales->count(),
             'recent_game_sessions' => GameSession::where('profile_id', $profile->id)->where('status', 'completed')->latest('completed_at')->take(3)->get(['id', 'game_definition_id', 'duration_ms', 'completed_at']),
@@ -52,5 +53,13 @@ class PortalController extends BaseController
                 ])->values(),
             'activities' => $scales->values(),
         ];
+    }
+
+    private function profileCompletion(array $details): int
+    {
+        $required = ['date_of_birth', 'grade_level', 'school_name', 'curriculum', 'primary_language', 'sleep_hours', 'activity_days', 'interests'];
+        $completed = collect($required)->filter(fn ($key) => isset($details[$key]) && $details[$key] !== '' && $details[$key] !== [])->count();
+
+        return (int) round(($completed / count($required)) * 100);
     }
 }

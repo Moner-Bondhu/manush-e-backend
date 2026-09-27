@@ -45,14 +45,14 @@ class UserController extends BaseController
             $user = $request->user();
 
 
-            $profile = Profile::factory()->create([
+            $profile = Profile::create([
                 'user_id' => $user->id,
                 'full_name' => $request->input('fullName'),
                 'type' => $request->input('type'),
                 'relation_type' => $request->input('relationType'),
             ]);
 
-            $demography = Demography::factory()->create([
+            $demography = Demography::create([
                 'profile_id' => $profile->id,
                 'gender' => $request->input('gender'),
                 'dob' => $request->input('dob'),
