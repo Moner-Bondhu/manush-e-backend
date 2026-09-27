@@ -48,9 +48,10 @@ class ScaleController extends BaseController
                 ->whereNotNull('code')
                 ->get();
             $user = $request->user();
-            $selectedProfile = $request->filled('profile_id')
-                ? Profile::findOrFail($request->integer('profile_id'))
-                : $user->profiles->where('type', $profile)->firstOrFail();
+            $requestedProfileId = $request->query('profile_id');
+            $selectedProfile = $requestedProfileId !== null
+                ? Profile::findOrFail((int) $requestedProfileId)
+                : Profile::where('user_id', $user->id)->where('type', $profile)->firstOrFail();
             $this->authorizeProfile($request, $selectedProfile);
             $profile_id = $selectedProfile->id;
 
@@ -99,8 +100,8 @@ class ScaleController extends BaseController
     public function show(Request $request, $scale_id)
     {
         try {
-            if ($request->filled('profile_id')) {
-                $this->authorizeProfile($request, Profile::findOrFail($request->integer('profile_id')));
+            if ($request->query('profile_id') !== null) {
+                $this->authorizeProfile($request, Profile::findOrFail((int) $request->query('profile_id')));
             }
             $scale = new ScaleResource(Scale::find($scale_id)->load('questions.options'));
             return $this->sendResponse('fetched', $scale);

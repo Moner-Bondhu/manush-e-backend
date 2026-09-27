@@ -6,6 +6,7 @@ use App\Models\Option;
 use App\Models\Otp;
 use App\Models\Profile;
 use App\Models\Question;
+use App\Models\LearningGroup;
 use App\Models\Response;
 use App\Models\Scale;
 use App\Models\User;
@@ -192,5 +193,32 @@ class ApiControllerTest extends TestCase
             'text_answer' => 'Updated answer',
             'numeric_answer' => 8,
         ]);
+    }
+
+    public function test_teacher_can_open_and_advance_an_assigned_student_activity(): void
+    {
+        $teacher = User::factory()->create(['user_type' => 'teacher']);
+        $family = User::factory()->create();
+        $profile = Profile::factory()->create(['user_id' => $family->id, 'type' => 'child']);
+        $group = LearningGroup::create(['teacher_user_id' => $teacher->id, 'name' => 'Demo Class']);
+        $group->profiles()->attach($profile);
+        $scale = Scale::factory()->create(['visible_to' => 'child', 'code' => 'TEACHER-PREVIEW', 'is_published' => true]);
+        $question = Question::factory()->create(['scale_id' => $scale->id]);
+        $option = Option::factory()->create(['question_id' => $question->id]);
+        Sanctum::actingAs($teacher);
+
+        $this->getJson("/api/scales/child?profile_id={$profile->id}")
+            ->assertOk()
+            ->assertJsonPath('data.0.response_count', 0);
+
+        $this->postJson("/api/question/respond/{$question->id}", [
+            'profile_id' => $profile->id,
+            'option_id' => $option->id,
+        ])->assertOk();
+
+        $this->getJson("/api/scales/child?profile_id={$profile->id}")
+            ->assertOk()
+            ->assertJsonPath('data.0.response_count', 1)
+            ->assertJsonPath('data.0.status', 'complete');
     }
 }
