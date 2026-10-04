@@ -20,6 +20,13 @@ class ApiControllerTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_protected_api_returns_json_unauthorized_without_accept_header(): void
+    {
+        $this->get('/api/assessment-library')
+            ->assertUnauthorized()
+            ->assertJsonPath('message', 'Unauthenticated.');
+    }
+
     public function test_authenticated_user_can_view_measurement_library_metadata()
     {
         $this->seed(MeasurementLibrarySeeder::class);
