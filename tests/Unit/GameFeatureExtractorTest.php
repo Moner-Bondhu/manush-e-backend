@@ -53,6 +53,7 @@ class GameFeatureExtractorTest extends TestCase
         $this->assertDatabaseHas('child_feature_snapshots', ['domain' => 'inhibitory_control', 'feature' => 'commission_rate', 'value' => 25]);
         $this->assertDatabaseHas('child_feature_snapshots', ['domain' => 'attention', 'feature' => 'omission_rate', 'value' => 25]);
         $this->assertDatabaseHas('child_feature_snapshots', ['domain' => 'attention', 'feature' => 'median_response_ms', 'value' => 1225]);
+        $this->assertDatabaseMissing('child_feature_snapshots', ['domain' => 'inhibitory_control', 'feature' => 'task_accuracy']);
     }
 
     public function test_it_ignores_implausible_latency_values(): void
@@ -68,12 +69,12 @@ class GameFeatureExtractorTest extends TestCase
             'game_definition_id' => $game->id,
             'profile_id' => $profile->id,
             'status' => 'completed',
-            'duration_ms' => 1000,
-            'metrics' => ['attempted_rounds' => 2, 'correct_choices' => 2],
+            'duration_ms' => 2000,
+            'metrics' => ['attempted_rounds' => 4, 'correct_choices' => 4],
             'started_at' => now()->subSecond(),
             'completed_at' => now(),
         ]);
-        foreach ([20, 40000] as $index => $responseMs) {
+        foreach ([20, 40000, 40, 50000] as $index => $responseMs) {
             GameEvent::create([
                 'game_session_id' => $session->id,
                 'event_type' => 'response',
@@ -86,5 +87,26 @@ class GameFeatureExtractorTest extends TestCase
 
         $this->assertDatabaseMissing('child_feature_snapshots', ['source_id' => $session->id, 'feature' => 'median_response_ms']);
         $this->assertDatabaseHas('child_feature_snapshots', ['source_id' => $session->id, 'domain' => 'selective_attention', 'feature' => 'task_accuracy']);
+    }
+
+    public function test_it_does_not_capture_too_little_interaction_data(): void
+    {
+        $profile = Profile::factory()->create(['user_id' => User::factory()->create()->id]);
+        $game = GameDefinition::create([
+            'slug' => 'sky-scout', 'title' => 'Sky Scout', 'description' => 'Test game', 'skill_tags' => ['attention'],
+        ]);
+        $session = GameSession::create([
+            'game_definition_id' => $game->id, 'profile_id' => $profile->id, 'status' => 'completed',
+            'duration_ms' => 800, 'metrics' => ['attempted_rounds' => 1, 'correct_choices' => 1],
+            'started_at' => now()->subSecond(), 'completed_at' => now(),
+        ]);
+        GameEvent::create([
+            'game_session_id' => $session->id, 'event_type' => 'response',
+            'payload' => ['round' => 1, 'correct' => true, 'response_ms' => 500], 'occurred_at' => now(),
+        ]);
+
+        app(GameFeatureExtractor::class)->capture($session->load('game'));
+
+        $this->assertDatabaseMissing('child_feature_snapshots', ['source_id' => $session->id]);
     }
 }

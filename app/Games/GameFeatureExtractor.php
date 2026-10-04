@@ -7,15 +7,39 @@ use App\Models\GameSession;
 
 class GameFeatureExtractor
 {
-    private const GAME_DOMAINS = [
-        'focus-lab' => ['attention', 'inhibitory_control'],
-        'signal-garden' => ['sustained_attention', 'inhibitory_control'],
-        'sky-scout' => ['selective_attention', 'processing_speed'],
-        'memory-market' => ['working_memory', 'sequencing'],
-        'mission-maker' => ['planning', 'sequencing'],
-        'goal-street' => ['planning', 'visual_scanning'],
-        'rhythm-river' => ['timing', 'working_memory'],
-        'pet-village' => ['social_emotional', 'perspective_taking'],
+    private const GAME_FEATURES = [
+        'focus-lab' => [
+            'attention' => ['task_accuracy', 'median_response_ms', 'response_consistency', 'late_round_accuracy_change', 'omission_rate'],
+            'inhibitory_control' => ['commission_rate'],
+        ],
+        'signal-garden' => [
+            'sustained_attention' => ['task_accuracy', 'late_round_accuracy_change', 'omission_rate'],
+            'inhibitory_control' => ['commission_rate', 'median_response_ms'],
+        ],
+        'sky-scout' => [
+            'selective_attention' => ['task_accuracy'],
+            'processing_speed' => ['median_response_ms', 'response_consistency'],
+        ],
+        'memory-market' => [
+            'working_memory' => ['task_accuracy', 'response_consistency'],
+            'sequencing' => ['median_response_ms', 'late_round_accuracy_change'],
+        ],
+        'mission-maker' => [
+            'planning' => ['task_accuracy', 'median_response_ms'],
+            'sequencing' => ['response_consistency', 'late_round_accuracy_change'],
+        ],
+        'goal-street' => [
+            'planning' => ['task_accuracy', 'late_round_accuracy_change'],
+            'visual_scanning' => ['median_response_ms', 'response_consistency'],
+        ],
+        'rhythm-river' => [
+            'timing' => ['median_response_ms', 'response_consistency'],
+            'working_memory' => ['task_accuracy', 'late_round_accuracy_change'],
+        ],
+        'pet-village' => [
+            'social_emotional' => ['task_accuracy', 'response_consistency'],
+            'perspective_taking' => ['median_response_ms', 'late_round_accuracy_change'],
+        ],
     ];
 
     public function capture(GameSession $session): void
@@ -25,6 +49,9 @@ class GameFeatureExtractor
         $correct = min(max((int) ($metrics['correct_choices'] ?? 0), 0), $attempts);
         $accuracy = round(($correct / $attempts) * 100, 3);
         $responses = $session->events()->where('event_type', 'response')->get();
+        if ($attempts < 3 || $responses->count() < 3) {
+            return;
+        }
         $latencies = $responses->pluck('payload')
             ->map(fn ($payload) => $payload['response_ms'] ?? null)
             ->filter(fn ($value) => is_numeric($value) && $value >= 100 && $value <= 30000)
@@ -46,13 +73,18 @@ class GameFeatureExtractor
         $features = array_merge($features, $this->attentionErrors($responses));
 
         $snapshots = [];
-        foreach (self::GAME_DOMAINS[$session->game->slug] ?? ['attention'] as $domain) {
-            foreach ($features as $feature => $value) {
-                $snapshots[] = $this->snapshot($session, $domain, $feature, $value);
+        $featureMap = self::GAME_FEATURES[$session->game->slug] ?? ['attention' => array_keys($features)];
+        foreach ($featureMap as $domain => $allowedFeatures) {
+            foreach ($allowedFeatures as $feature) {
+                if (array_key_exists($feature, $features)) {
+                    $snapshots[] = $this->snapshot($session, $domain, $feature, $features[$feature]);
+                }
             }
         }
 
-        ChildFeatureSnapshot::insert($snapshots);
+        if ($snapshots !== []) {
+            ChildFeatureSnapshot::insert($snapshots);
+        }
     }
 
     private function snapshot(GameSession $session, string $domain, string $feature, float $value): array

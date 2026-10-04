@@ -7,6 +7,7 @@ use App\Models\Otp;
 use App\Models\Profile;
 use App\Models\Question;
 use App\Models\LearningGroup;
+use App\Models\ProfileUserAssignment;
 use App\Models\Response;
 use App\Models\Scale;
 use App\Models\User;
@@ -22,7 +23,7 @@ class ApiControllerTest extends TestCase
     public function test_authenticated_user_can_view_measurement_library_metadata()
     {
         $this->seed(MeasurementLibrarySeeder::class);
-        Sanctum::actingAs(User::factory()->create());
+        Sanctum::actingAs(User::factory()->create(['user_type' => 'teacher']));
 
         $response = $this->getJson('/api/assessment-library');
 
@@ -220,5 +221,30 @@ class ApiControllerTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.0.response_count', 1)
             ->assertJsonPath('data.0.status', 'complete');
+    }
+
+    public function test_parent_support_review_is_adult_only_and_includes_referral_for_priority_case(): void
+    {
+        $parent = User::factory()->create(['portal_role' => 'parent']);
+        $student = User::factory()->create(['portal_role' => 'student']);
+        $profile = Profile::factory()->create([
+            'user_id' => $parent->id,
+            'type' => 'child',
+            'details' => ['support_review' => [
+                'priority' => 'priority',
+                'summary' => 'Human review recommended / মানবিক পর্যালোচনা প্রস্তাবিত',
+            ]],
+        ]);
+        ProfileUserAssignment::create(['profile_id' => $profile->id, 'user_id' => $parent->id, 'role' => 'parent']);
+        ProfileUserAssignment::create(['profile_id' => $profile->id, 'user_id' => $student->id, 'role' => 'student']);
+
+        $this->actingAs($parent, 'sanctum')->getJson('/api/portal/parent')
+            ->assertOk()
+            ->assertJsonPath('data.support_review.priority', 'priority')
+            ->assertJsonPath('data.support_review.expert_referral.provider', 'Moner Bondhu');
+
+        $this->actingAs($student, 'sanctum')->getJson('/api/user')
+            ->assertOk()
+            ->assertJsonMissing(['support_review']);
     }
 }

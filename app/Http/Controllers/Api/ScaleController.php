@@ -13,6 +13,7 @@ class ScaleController extends BaseController
 {
     public function library(Request $request)
     {
+        abort_unless(in_array($request->user()->user_type, ['teacher', 'admin'], true), 403);
         $audience = $request->query('audience');
         $scales = Scale::query()
             ->where('is_published', true)

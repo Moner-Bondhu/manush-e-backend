@@ -55,6 +55,7 @@ class PortalController extends BaseController
             'activities' => $scales->values(),
             'assigned_tasks' => $this->taskFeed($profile, $audience),
             'personalization' => $this->personalization($profile, $audience),
+            'support_review' => $this->supportReview($profile, $audience),
         ];
     }
 
@@ -85,9 +86,9 @@ class PortalController extends BaseController
             return [
                 'interests' => $interests,
                 'support_ideas' => [
-                    'Connect one home activity each week to '.($interests[0] ?? 'a current interest').'.',
-                    'Offer a choice between '.($expression[0] ?? 'talking').' and '.($expression[1] ?? 'drawing or making').' when sharing an idea.',
-                    'Use a short, predictable start-and-finish routine for home learning.',
+                    'Connect one home activity each week to '.($interests[0] ?? 'a current interest').'. / প্রতি সপ্তাহে বাড়ির একটি কাজকে শিশুর বর্তমান আগ্রহের সঙ্গে যুক্ত করুন।',
+                    'Offer a choice of ways to share an idea. / ভাব প্রকাশের জন্য কথা বলা, আঁকা বা তৈরি করার মধ্যে পছন্দের সুযোগ দিন।',
+                    'Use a short, predictable start-and-finish routine for home learning. / বাড়িতে শেখার জন্য সংক্ষিপ্ত ও পূর্বানুমেয় শুরু-শেষের রুটিন রাখুন।',
                 ],
                 'permission_note' => 'Family view shows practical supports and participation, not clinical interpretation.',
             ];
@@ -99,9 +100,9 @@ class PortalController extends BaseController
             'interests' => $interests,
             'expression_preferences' => $expression,
             'teaching_ideas' => [
-                'Keep the same learning objective and offer '.($expression[0] ?? 'a visual or verbal').' entry point.',
-                'Connect examples to '.($interests[0] ?? 'the student’s current interests').' before independent practice.',
-                'Use a short check for understanding, then adjust task steps rather than lowering the goal.',
+                'Keep the same learning objective and offer '.($expression[0] ?? 'a visual or verbal').' entry point. / শেখার লক্ষ্য একই রেখে দৃশ্য বা কথার মাধ্যমে শুরু করার সুযোগ দিন।',
+                'Connect examples to '.($interests[0] ?? 'the student’s current interests').' before independent practice. / একক অনুশীলনের আগে উদাহরণকে শিক্ষার্থীর আগ্রহের সঙ্গে যুক্ত করুন।',
+                'Use a short check for understanding, then adjust task steps rather than lowering the goal. / লক্ষ্য না কমিয়ে সংক্ষিপ্তভাবে বোঝাপড়া যাচাই করে কাজের ধাপ সামঞ্জস্য করুন।',
             ],
             'permission_note' => 'Teacher view supports pedagogy and academic planning; expert-only interpretation is not shown.',
         ];
@@ -113,5 +114,43 @@ class PortalController extends BaseController
         $completed = collect($required)->filter(fn ($key) => isset($details[$key]) && $details[$key] !== '' && $details[$key] !== [])->count();
 
         return (int) round(($completed / count($required)) * 100);
+    }
+
+    private function supportReview($profile, string $audience): array
+    {
+        $details = $profile->details ?? [];
+        $review = (array) ($details['support_review'] ?? []);
+        $priority = in_array($review['priority'] ?? null, ['routine', 'follow_up', 'priority'], true)
+            ? $review['priority']
+            : 'context_needed';
+
+        $labels = [
+            'routine' => 'Routine support / নিয়মিত সহায়তা',
+            'follow_up' => 'Follow up / ফলো-আপ প্রয়োজন',
+            'priority' => 'Priority review / অগ্রাধিকার পর্যালোচনা',
+            'context_needed' => 'More context needed / আরও তথ্য প্রয়োজন',
+        ];
+
+        $actions = array_values((array) ($review[$audience.'_actions'] ?? []));
+        if ($actions === []) {
+            $actions = $priority === 'context_needed'
+                ? ['Complete the student profile and add two classroom or home observations. / শিক্ষার্থীর প্রোফাইল সম্পূর্ণ করুন এবং শ্রেণিকক্ষ বা বাড়ির দুটি পর্যবেক্ষণ যোগ করুন।']
+                : ['Continue the current support plan and review new observations regularly. / বর্তমান সহায়তা পরিকল্পনা চালিয়ে যান এবং নতুন পর্যবেক্ষণ নিয়মিত পর্যালোচনা করুন।'];
+        }
+
+        return [
+            'priority' => $priority,
+            'label' => $labels[$priority],
+            'summary' => $review['summary'] ?? 'No urgent concern is indicated in the available school-supported information. / স্কুল-সমর্থিত বর্তমান তথ্যে জরুরি উদ্বেগ নির্দেশিত হয়নি।',
+            'evidence' => array_values((array) ($review['evidence'] ?? [])),
+            'next_actions' => $actions,
+            'expert_referral' => in_array($priority, ['follow_up', 'priority'], true) ? [
+                'provider' => 'Moner Bondhu',
+                'service' => 'Student and family counselling / শিক্ষার্থী ও পরিবার কাউন্সেলিং',
+                'url' => 'https://www.monerbondhu.com/services',
+                'phone' => '+880 1776632344',
+                'note' => 'An authorized adult can contact the provider; this is a referral option, not a diagnosis. / অনুমোদিত প্রাপ্তবয়স্ক সেবাদাতার সঙ্গে যোগাযোগ করতে পারেন; এটি রেফারেলের বিকল্প, রোগনির্ণয় নয়।',
+            ] : null,
+        ];
     }
 }
