@@ -2,6 +2,13 @@
 
 return [
 
+    'ssl_sms' => [
+        'url' => env('SSL_SMS_URL'),
+        'api_token' => env('SSL_SMS_API_TOKEN'),
+        'sid' => env('SSL_SMS_SID'),
+        'csms_id' => env('SSL_SMS_CSMSID'),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Third Party Services

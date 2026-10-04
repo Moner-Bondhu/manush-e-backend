@@ -82,7 +82,20 @@ services:
         value: database
         scope: RUN_TIME
       - key: QUEUE_CONNECTION
-        value: database
+        value: sync
+        scope: RUN_TIME
+      - key: SSL_SMS_URL
+        value: https://smsplus.sslwireless.com/api/v3/send-sms
+        scope: RUN_TIME
+      - key: SSL_SMS_API_TOKEN
+        value: REPLACE_IN_DIGITALOCEAN
+        scope: RUN_TIME
+        type: SECRET
+      - key: SSL_SMS_SID
+        value: MBBRANDAPI
+        scope: RUN_TIME
+      - key: SSL_SMS_CSMSID
+        value: "123456789"
         scope: RUN_TIME
       - key: RUN_MIGRATIONS
         value: "true"

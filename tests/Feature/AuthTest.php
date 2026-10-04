@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\SendSms;
 use App\Models\User;
 use App\Models\Otp;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Bus;
 use Tests\TestCase;
 
 class AuthTest extends TestCase
@@ -28,8 +30,10 @@ class AuthTest extends TestCase
         ])->assertOk()->assertJsonPath('message', 'authenticated');
     }
 
-    public function test_demo_login_rejects_other_phone_numbers(): void
+    public function test_non_demo_phone_uses_the_sms_otp_flow(): void
     {
+        Bus::fake();
+
         config()->set('auth.demo', [
             'enabled' => true,
             'phone_number' => '+8801700000000',
@@ -37,8 +41,9 @@ class AuthTest extends TestCase
         ]);
 
         $this->postJson('/api/login', ['phoneNumber' => '+8801800000000'])
-            ->assertForbidden()
-            ->assertJsonPath('message', 'demo_phone_required');
+            ->assertOk();
+
+        Bus::assertDispatched(SendSms::class);
     }
 
     public function test_login_with_otp_returns_token_and_user()

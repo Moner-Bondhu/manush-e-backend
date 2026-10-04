@@ -36,19 +36,23 @@ class SendSms implements ShouldQueue
      */
     public function handle(): void
     {
-        $apiUrl = env('SSL_SMS_URL');
-        $apiToken = env('SSL_SMS_API_TOKEN');
-        $csms_id = env('SSL_SMS_CSMSID');
-        $sid = env('SSL_SMS_SID');
+        $apiUrl = config('services.ssl_sms.url');
+        $apiToken = config('services.ssl_sms.api_token');
+        $csms_id = config('services.ssl_sms.csms_id');
+        $sid = config('services.ssl_sms.sid');
+
+        if (! $apiUrl || ! $apiToken || ! $sid) {
+            throw new \RuntimeException('SMS provider is not configured.');
+        }
 
         if(str_starts_with($this->phoneNumber, "+88")){
-            $response = Http::post($apiUrl, [
+            Http::timeout(15)->post($apiUrl, [
                 'api_token' => $apiToken,
                 'msisdn' => $this->phoneNumber,
                 'sid' => $sid,
                 'csms_id' => $csms_id,
                 'sms' => $this->message,
-        ]);
+            ])->throw();
         }
     }
 }

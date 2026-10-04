@@ -32,10 +32,6 @@ class AuthController extends BaseController
                 return $this->sendError('validation_error', $validator->errors(), 401);
             }
 
-            if ($this->demoEnabled() && ! $this->demoPhoneAllowed($phoneNumber)) {
-                return $this->sendError('demo_phone_required', __('auth.failed'), 403);
-            }
-
             if (!$user) {
                 $user = User::create([
                     'name' => 'Manush-E User',
@@ -43,7 +39,7 @@ class AuthController extends BaseController
                 ]);
             }
 
-            if ($this->demoEnabled()) {
+            if ($this->isDemoPhone($phoneNumber)) {
                 $user->otps()->update(['is_valid' => false]);
                 Otp::create([
                     'user_id' => $user->id,
@@ -96,9 +92,6 @@ class AuthController extends BaseController
             } else {
                 return $this->sendError('validation_error', __('auth.failed'), 401);
             }
-            if ($this->demoEnabled() && ! $this->demoPhoneAllowed($phoneNumber)) {
-                return $this->sendError('demo_phone_required', __('auth.failed'), 403);
-            }
             $validator = Validator::make($request->all(), [
                 'otp' => 'required|integer|digits:4'
             ]);
@@ -140,9 +133,9 @@ class AuthController extends BaseController
             && preg_match('/^\d{4}$/', (string) config('auth.demo.otp')) === 1;
     }
 
-    private function demoPhoneAllowed(string $phoneNumber): bool
+    private function isDemoPhone(string $phoneNumber): bool
     {
-        return in_array($phoneNumber, $this->demoPhones(), true);
+        return $this->demoEnabled() && in_array($phoneNumber, $this->demoPhones(), true);
     }
 
     private function demoPhones(): array
