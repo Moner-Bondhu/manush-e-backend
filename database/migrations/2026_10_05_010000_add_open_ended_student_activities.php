@@ -12,6 +12,9 @@ return new class extends Migration
         Schema::table('responses', function (Blueprint $table) {
             $table->foreignId('option_id')->nullable()->change();
         });
+        Schema::table('questions', function (Blueprint $table) {
+            $table->text('text')->change();
+        });
         app(MeasurementLibrarySeeder::class)->run();
     }
 
