@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('profile_id')->constrained();
             $table->foreignId('question_id')->constrained();
-            $table->foreignId('option_id')->constrained()->nullable();
+            $table->foreignId('option_id')->nullable()->constrained();
             $table->text('text_answer')->nullable();
             $table->integer('numeric_answer')->nullable();
             $table->timestamps();

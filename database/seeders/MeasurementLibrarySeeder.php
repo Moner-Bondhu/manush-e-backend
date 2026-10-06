@@ -26,6 +26,10 @@ class MeasurementLibrarySeeder extends Seeder
                         'image' => null,
                     ]
                 );
+                if (($item['type'] ?? 'select_one') === 'text') {
+                    $question->options()->delete();
+                    continue;
+                }
                 foreach ($this->optionsFor($item['options'] ?? 'frequency') as $optionIndex => $option) {
                     $question->options()->updateOrCreate(
                         ['order' => $optionIndex + 1],
@@ -119,6 +123,48 @@ class MeasurementLibrarySeeder extends Seeder
                     ['text' => 'I keep trying when something matters to me. / কোনো কিছু আমার কাছে গুরুত্বপূর্ণ হলে চেষ্টা চালিয়ে যাই।', 'construct' => 'persistence', 'options' => 'agreement'],
                     ['text' => 'I like helping a group decide what to do next. / দলকে পরের কাজ ঠিক করতে সাহায্য করতে ভালো লাগে।', 'construct' => 'leadership', 'options' => 'agreement'],
                     ['text' => 'I can name something I would like to become better at. / কোন বিষয়ে আরও ভালো হতে চাই তা বলতে পারি।', 'construct' => 'purpose', 'options' => 'agreement'],
+                ],
+            ]),
+            array_merge($base, [
+                'code' => 'CHILD-OPEN-THINKING-STUDIO', 'name' => 'Idea Studio / ভাবনার স্টুডিও', 'visible_to' => 'child',
+                'domain' => 'cognitive_expression', 'constructs' => ['creative_imagination', 'divergent_thinking', 'logical_reasoning', 'numerical_reasoning', 'metacognition'],
+                'evidence_type' => 'open_ended_work_sample', 'cadence' => 'termly', 'estimated_minutes' => 10,
+                'source_name' => 'OECD SSES open-mindedness crosswalk; APA educational assessment principles',
+                'interpretation_note' => 'Qualitative work sample. Review process, explanation, originality, and strategy; do not derive an IQ score.',
+                'description' => 'Create, explain, and solve in your own way. Words, lists, and imaginative answers are welcome. / নিজের মতো করে তৈরি করো, বোঝাও ও সমাধান করো। শব্দ, তালিকা ও কল্পনাময় উত্তর সবই গ্রহণযোগ্য।',
+                'questions' => [
+                    ['type' => 'text', 'text' => 'A cardboard box can become anything. What would you turn it into, and how would it work? / একটি কার্ডবোর্ডের বাক্স যেকোনো কিছু হতে পারে। তুমি এটিকে কী বানাবে, আর সেটি কীভাবে কাজ করবে?', 'subtext' => 'Describe as many useful or surprising details as you like. / যত খুশি উপকারী বা চমকপ্রদ বিবরণ দাও।', 'construct' => 'creative_imagination'],
+                    ['type' => 'text', 'text' => 'A village has water for only two of these today: a garden, an animal shelter, and a playground. What should happen first, and why? / একটি গ্রামে আজ বাগান, পশুর আশ্রয় ও খেলার মাঠের মধ্যে মাত্র দুটির জন্য পানি আছে। প্রথমে কী করা উচিত, আর কেন?', 'subtext' => 'There may be more than one good answer. Explain your thinking. / একাধিক ভালো উত্তর হতে পারে। তোমার ভাবনা বুঝিয়ে বলো।', 'construct' => 'logical_reasoning'],
+                    ['type' => 'text', 'text' => 'You have 24 tiles. Show two different ways to arrange all of them in equal rows. What pattern do you notice? / তোমার কাছে ২৪টি টাইল আছে। সবগুলোকে সমান সারিতে সাজানোর দুটি ভিন্ন উপায় দেখাও। কী ধরন লক্ষ্য করছ?', 'subtext' => 'You can use numbers, words, or a simple text diagram. / সংখ্যা, শব্দ বা সহজ টেক্সট চিত্র ব্যবহার করতে পারো।', 'construct' => 'numerical_reasoning'],
+                    ['type' => 'text', 'text' => 'Tell us about a difficult problem you solved or tried to solve. What did you try first, and what did you change? / তুমি সমাধান করেছ বা চেষ্টা করেছ এমন একটি কঠিন সমস্যার কথা বলো। প্রথমে কী চেষ্টা করেছিলে, পরে কী বদলেছিলে?', 'construct' => 'metacognition'],
+                ],
+            ]),
+            array_merge($base, [
+                'code' => 'CHILD-OPEN-INTEREST-EXPLORER', 'name' => 'Curiosity Map / কৌতূহলের মানচিত্র', 'visible_to' => 'child',
+                'domain' => 'student_potential', 'constructs' => ['intellectual_curiosity', 'academic_interest', 'interest_depth', 'purpose', 'preferred_expression'],
+                'evidence_type' => 'open_ended_interest_sample', 'cadence' => 'termly', 'estimated_minutes' => 8,
+                'source_name' => 'OECD SSES curiosity and creativity; WHO adolescent agency and learning domains',
+                'interpretation_note' => 'Interest evidence is contextual and changeable. Use it to offer opportunities, not to limit pathways.',
+                'description' => 'Map what absorbs your attention, what you want to understand, and how you like to share ideas. / কোন বিষয় তোমার মন টানে, কী বুঝতে চাও এবং কীভাবে ভাবনা প্রকাশ করতে ভালোবাসো তার মানচিত্র তৈরি করো।',
+                'questions' => [
+                    ['type' => 'text', 'text' => 'What is something you can spend a long time learning, making, watching, or practicing without being reminded? / মনে করিয়ে না দিলেও কোন বিষয় শেখা, বানানো, দেখা বা অনুশীলনে তুমি অনেক সময় কাটাতে পারো?', 'construct' => 'interest_depth'],
+                    ['type' => 'text', 'text' => 'If you could ask an expert three questions about any school subject or real-world topic, what would you ask? / স্কুলের কোনো বিষয় বা বাস্তব জগতের প্রসঙ্গে একজন বিশেষজ্ঞকে তিনটি প্রশ্ন করতে পারলে কী জিজ্ঞেস করতে?', 'construct' => 'intellectual_curiosity'],
+                    ['type' => 'text', 'text' => 'Choose something you know well. How would you teach it to a younger student? / তুমি ভালো জানো এমন কিছু বেছে নাও। একজন ছোট শিক্ষার্থীকে সেটি কীভাবে শেখাবে?', 'construct' => 'preferred_expression'],
+                    ['type' => 'text', 'text' => 'What would you like to become better at this year, and what small project could help? / এ বছর কোন বিষয়ে আরও ভালো হতে চাও, আর কোন ছোট প্রকল্প এতে সাহায্য করতে পারে?', 'construct' => 'purpose'],
+                ],
+            ]),
+            array_merge($base, [
+                'code' => 'CHILD-OPEN-EMOTION-SCENARIOS', 'name' => 'People and Feelings Lab / মানুষ ও অনুভূতির ল্যাব', 'visible_to' => 'child',
+                'domain' => 'social_emotional', 'constructs' => ['emotion_awareness', 'perspective_taking', 'empathy', 'responsible_decision_making', 'relationship_repair'],
+                'evidence_type' => 'open_ended_scenario', 'cadence' => 'termly', 'estimated_minutes' => 9,
+                'source_name' => 'CASEL 5 competency crosswalk; OECD collaboration and emotion regulation',
+                'interpretation_note' => 'Scenario responses show reasoning in one context and should be reviewed alongside observed behaviour.',
+                'description' => 'Explore what people might feel and what could help next. There is room for different thoughtful answers. / মানুষ কী অনুভব করতে পারে এবং পরের কোন কাজটি সাহায্য করতে পারে তা ভাবো। ভিন্ন চিন্তাশীল উত্তরের সুযোগ আছে।',
+                'questions' => [
+                    ['type' => 'text', 'text' => 'A new student answers incorrectly and some classmates laugh. What might the student be feeling, and what could someone do next? / নতুন একজন শিক্ষার্থী ভুল উত্তর দিল এবং কয়েকজন সহপাঠী হাসল। শিক্ষার্থীটি কী অনুভব করতে পারে, আর এরপর কেউ কী করতে পারে?', 'construct' => 'empathy'],
+                    ['type' => 'text', 'text' => 'Two friends both want the same role in a group project. Tell the story from each person’s point of view, then suggest a fair next step. / দলীয় প্রকল্পে দুই বন্ধু একই ভূমিকা চায়। দুজনের দৃষ্টিভঙ্গি থেকে ঘটনাটি বলো, তারপর ন্যায্য পরবর্তী পদক্ষেপ প্রস্তাব করো।', 'construct' => 'perspective_taking'],
+                    ['type' => 'text', 'text' => 'You worked hard but your result was lower than you expected. What feelings might appear, and what could help you decide what to do next? / তুমি অনেক চেষ্টা করেছ, কিন্তু ফল প্রত্যাশার চেয়ে কম হয়েছে। কী অনুভূতি হতে পারে, আর এরপর কী করবে ঠিক করতে কী সাহায্য করতে পারে?', 'construct' => 'emotion_awareness'],
+                    ['type' => 'text', 'text' => 'You realize that something you said hurt a friend. What could you say or do to repair the situation? / তুমি বুঝতে পারলে তোমার কথায় একজন বন্ধু কষ্ট পেয়েছে। পরিস্থিতি ঠিক করতে কী বলতে বা করতে পারো?', 'construct' => 'relationship_repair'],
                 ],
             ]),
             array_merge($base, [

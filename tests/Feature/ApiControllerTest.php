@@ -35,11 +35,16 @@ class ApiControllerTest extends TestCase
         $response = $this->getJson('/api/assessment-library');
 
         $response->assertOk()
-            ->assertJsonPath('data.summary.packs', 9)
-            ->assertJsonPath('data.summary.questions', 45)
+            ->assertJsonPath('data.summary.packs', 12)
+            ->assertJsonPath('data.summary.questions', 57)
             ->assertJsonFragment([
                 'code' => 'CHILD-WELLBEING-PULSE',
                 'domain' => 'mental_wellbeing',
+                'instrument_status' => 'original_research_informed',
+            ])
+            ->assertJsonFragment([
+                'code' => 'CHILD-OPEN-THINKING-STUDIO',
+                'domain' => 'student_potential',
                 'instrument_status' => 'original_research_informed',
             ]);
     }
@@ -203,6 +208,40 @@ class ApiControllerTest extends TestCase
         ]);
     }
 
+    public function test_user_can_store_an_open_ended_response(): void
+    {
+        $user = User::factory()->create();
+        $scale = Scale::factory()->create(['visible_to' => 'child']);
+        $question = Question::factory()->create(['scale_id' => $scale->id, 'type' => 'text']);
+        $profile = Profile::factory()->create(['user_id' => $user->id, 'type' => 'child']);
+        Sanctum::actingAs($user);
+
+        $this->postJson("/api/question/respond/{$question->id}", [
+            'text_answer' => 'I would draw a map first and explain the route.',
+        ])->assertOk();
+
+        $this->assertDatabaseHas('responses', [
+            'profile_id' => $profile->id,
+            'question_id' => $question->id,
+            'text_answer' => 'I would draw a map first and explain the route.',
+        ]);
+    }
+
+    public function test_user_cannot_submit_an_option_from_another_question(): void
+    {
+        $user = User::factory()->create();
+        $scale = Scale::factory()->create(['visible_to' => 'child']);
+        $question = Question::factory()->create(['scale_id' => $scale->id, 'type' => 'select_one']);
+        $otherQuestion = Question::factory()->create(['scale_id' => $scale->id, 'type' => 'select_one']);
+        $wrongOption = Option::factory()->create(['question_id' => $otherQuestion->id]);
+        Profile::factory()->create(['user_id' => $user->id, 'type' => 'child']);
+        Sanctum::actingAs($user);
+
+        $this->postJson("/api/question/respond/{$question->id}", [
+            'option_id' => $wrongOption->id,
+        ])->assertUnprocessable();
+    }
+
     public function test_teacher_can_open_and_advance_an_assigned_student_activity(): void
     {
         $teacher = User::factory()->create(['user_type' => 'teacher']);
@@ -224,10 +263,10 @@ class ApiControllerTest extends TestCase
             'option_id' => $option->id,
         ])->assertOk();
 
-        $this->getJson("/api/scales/child?profile_id={$profile->id}")
-            ->assertOk()
-            ->assertJsonPath('data.0.response_count', 1)
-            ->assertJsonPath('data.0.status', 'complete');
+        $activity = collect($this->getJson("/api/scales/child?profile_id={$profile->id}")
+            ->assertOk()->json('data'))->firstWhere('id', $scale->id);
+        $this->assertSame(1, $activity['response_count']);
+        $this->assertSame('complete', $activity['status']);
     }
 
     public function test_parent_support_review_is_adult_only_and_includes_referral_for_priority_case(): void

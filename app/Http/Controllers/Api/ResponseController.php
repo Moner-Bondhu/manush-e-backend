@@ -8,6 +8,8 @@ use App\Models\Response;
 use App\Models\LearningGroup;
 use App\Models\Profile;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ResponseController extends BaseController
 {
@@ -29,6 +31,14 @@ class ResponseController extends BaseController
             $user = $request->user();
             $question = Question::findOrFail($question_id);
             $scale = $question->scale;
+            $rules = match ($question->type) {
+                'select_one' => ['option_id' => ['required', 'integer', Rule::exists('options', 'id')->where('question_id', $question->id)]],
+                'select_multiple' => ['text_answer' => ['required', 'string', 'max:1000']],
+                'text' => ['text_answer' => ['required', 'string', 'min:2', 'max:2000']],
+                'slider' => ['numeric_answer' => ['required', 'integer', 'between:1,5']],
+                default => [],
+            };
+            $request->validate(array_merge($rules, ['profile_id' => ['nullable', 'integer', 'exists:profiles,id']]));
             $profile = $request->filled('profile_id')
                 ? Profile::findOrFail($request->integer('profile_id'))
                 : ($user->profiles()->where('type', $scale->visible_to)->first()
@@ -57,9 +67,10 @@ class ResponseController extends BaseController
             }
 
             return $this->sendResponse('created', $response);
+        } catch (ValidationException $exception) {
+            throw $exception;
         } catch (\Throwable $th) {
-            //throw $th;
-            return $this->sendError('server_error', $th->getMessage(), 500);
+            throw $th;
         }
     }
 
