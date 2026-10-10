@@ -52,8 +52,26 @@ class ProfileSetupController extends BaseController
             abort_unless(in_array($request->user()->user_type, ['teacher', 'admin'], true), 403);
             return [$request->user(), $request->user()->professional_details ?? []];
         }
-        $profile = $request->user()->profiles()->where('type', $role)->firstOrFail();
-        return [$profile, $profile->details ?? []];
+        $profile = $request->user()->profiles()->where('type', $role)->first();
+        if (!$profile) {
+            $assignmentRoles = $role === 'child' ? ['student', 'parent'] : [$role];
+            $assignment = $request->user()->profileAssignments()
+                ->whereIn('role', $assignmentRoles)
+                ->whereHas('profile', fn ($query) => $query->where('type', $role))
+                ->with('profile.demography')
+                ->first();
+            $profile = $assignment?->profile;
+        }
+        abort_unless($profile, 404);
+
+        $data = $profile->details ?? [];
+        if ($role === 'child' && $profile->demography) {
+            $data = array_merge([
+                'date_of_birth' => optional($profile->demography->dob)->format('Y-m-d'),
+                'grade_level' => $profile->demography->grade,
+            ], $data);
+        }
+        return [$profile, $data];
     }
 
     private function completion(string $role, array $data): array

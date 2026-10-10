@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Profile;
+use App\Models\ProfileUserAssignment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -39,6 +40,23 @@ class ProfileSetupTest extends TestCase
             'activity_days' => 5, 'interests' => 'drawing, football',
         ]])->assertOk()->assertJsonPath('data.completion.percent', 100)
             ->assertJsonPath('data.completion.completed', 8);
+    }
+
+    public function test_assigned_student_can_load_and_update_their_child_profile(): void
+    {
+        $family = User::factory()->create();
+        $student = User::factory()->create(['portal_role' => 'student']);
+        $child = Profile::factory()->create(['user_id' => $family->id, 'type' => 'child', 'full_name' => 'Aarav']);
+        ProfileUserAssignment::create(['profile_id' => $child->id, 'user_id' => $student->id, 'role' => 'student']);
+
+        $this->actingAs($student, 'sanctum')->getJson('/api/profile-setup/child')
+            ->assertOk()->assertJsonPath('data.subject_name', 'Aarav');
+
+        $this->actingAs($student, 'sanctum')->putJson('/api/profile-setup/child', [
+            'data' => ['school_name' => 'River School', 'interests' => 'drawing'],
+        ])->assertOk();
+
+        $this->assertSame('River School', $child->fresh()->details['school_name']);
     }
 
     public function test_teacher_can_save_professional_profile(): void
