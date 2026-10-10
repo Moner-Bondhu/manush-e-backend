@@ -16,6 +16,7 @@ class LocalDemoSeeder extends Seeder
     public function run(): void
     {
         $this->call(MeasurementLibrarySeeder::class);
+        $this->call(ExpandedGameLibrarySeeder::class);
 
         $user = User::updateOrCreate(
             ['phone_number' => '01700000000'],

@@ -40,6 +40,23 @@ class GameFeatureExtractor
             'social_emotional' => ['task_accuracy', 'response_consistency'],
             'perspective_taking' => ['median_response_ms', 'late_round_accuracy_change'],
         ],
+        'pattern-forge' => [
+            'pattern_reasoning' => ['task_accuracy', 'median_response_ms', 'response_consistency', 'late_round_accuracy_change'],
+        ],
+        'route-builder' => [
+            'planning' => ['task_accuracy', 'median_response_ms', 'late_round_accuracy_change'],
+            'constraint_reasoning' => ['response_consistency'],
+        ],
+        'emotion-detective' => [
+            'emotion_recognition' => ['task_accuracy', 'late_round_accuracy_change'],
+        ],
+        'story-lantern' => [
+            'perspective_taking' => ['task_accuracy', 'late_round_accuracy_change'],
+            'social_reasoning' => ['response_consistency'],
+        ],
+        'number-harbor' => [
+            'numerical_reasoning' => ['task_accuracy', 'median_response_ms', 'response_consistency'],
+        ],
     ];
 
     public function capture(GameSession $session): void
