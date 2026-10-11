@@ -135,7 +135,10 @@ class AuthController extends BaseController
 
     private function isDemoPhone(string $phoneNumber): bool
     {
-        return $this->demoEnabled() && in_array($phoneNumber, $this->demoPhones(), true);
+        return $this->demoEnabled() && (
+            in_array($phoneNumber, $this->demoPhones(), true)
+            || User::where('phone_number', $phoneNumber)->where('experiment_tag', 'demo_school')->exists()
+        );
     }
 
     private function demoPhones(): array

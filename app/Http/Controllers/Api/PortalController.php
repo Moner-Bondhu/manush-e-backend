@@ -30,18 +30,42 @@ class PortalController extends BaseController
         ]));
     }
 
+    public function reviewOverview(Request $request)
+    {
+        abort_unless($request->user()->user_type === 'admin', 403);
+        $profiles = LearningGroup::with('profiles')->get()->flatMap->profiles->unique('id');
+
+        return $this->sendResponse('fetched', [
+            'viewer_role' => $request->user()->portal_role,
+            'summary' => [
+                'students' => $profiles->count(),
+                'profile_average' => (int) round($profiles->avg(fn ($profile) => $this->profileCompletion($profile->details ?? [])) ?: 0),
+                'priority_reviews' => $profiles->filter(fn ($profile) => data_get($profile->details, 'support_review.priority') === 'priority')->count(),
+            ],
+            'students' => $profiles->map(fn ($profile) => $this->profileSummary($profile, 'expert'))->values(),
+        ]);
+    }
+
     private function profileSummary($profile, string $audience): array
     {
         $scales = Scale::where('visible_to', 'child')->withCount('questions')->get()->map(function ($scale) use ($profile) {
             $responses = Response::where('profile_id', $profile->id)->whereIn('question_id', $scale->questions()->pluck('id'))->count();
             return ['id' => $scale->id, 'name' => $scale->name, 'complete' => $responses >= $scale->questions_count, 'responses' => $responses, 'total' => $scale->questions_count];
         });
+        $completedTasks = $scales->where('complete', true)->count();
+        $totalTasks = $scales->count();
         return [
             'id' => $profile->id,
             'name' => $profile->full_name,
             'profile_completion' => $this->profileCompletion($profile->details ?? []),
             'completed_activities' => $scales->where('complete', true)->count(),
             'total_activities' => $scales->count(),
+            'task_completion_percent' => $totalTasks ? (int) round(($completedTasks / $totalTasks) * 100) : 0,
+            'evidence_coverage' => [
+                'profile' => $this->profileCompletion($profile->details ?? []),
+                'activities' => $totalTasks ? (int) round(($completedTasks / $totalTasks) * 100) : 0,
+                'play_domains' => ChildFeatureSnapshot::where('profile_id', $profile->id)->distinct('domain')->count('domain'),
+            ],
             'recent_game_sessions' => GameSession::where('profile_id', $profile->id)->where('status', 'completed')->latest('completed_at')->take(3)->get(['id', 'game_definition_id', 'duration_ms', 'completed_at']),
             'play_signals' => ChildFeatureSnapshot::where('profile_id', $profile->id)->latest('measured_at')->get()
                 ->groupBy('domain')->map(fn ($items, $domain) => [
@@ -104,7 +128,9 @@ class PortalController extends BaseController
                 'Connect examples to '.($interests[0] ?? 'the student’s current interests').' before independent practice. / একক অনুশীলনের আগে উদাহরণকে শিক্ষার্থীর আগ্রহের সঙ্গে যুক্ত করুন।',
                 'Use a short check for understanding, then adjust task steps rather than lowering the goal. / লক্ষ্য না কমিয়ে সংক্ষিপ্তভাবে বোঝাপড়া যাচাই করে কাজের ধাপ সামঞ্জস্য করুন।',
             ],
-            'permission_note' => 'Teacher view supports pedagogy and academic planning; expert-only interpretation is not shown.',
+            'permission_note' => $audience === 'expert'
+                ? 'Expert review combines available evidence and coverage; interpretation remains a human responsibility.'
+                : 'Teacher view supports pedagogy and academic planning; expert-only interpretation is not shown.',
         ];
     }
 

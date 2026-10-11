@@ -293,4 +293,28 @@ class ApiControllerTest extends TestCase
             ->assertOk()
             ->assertJsonMissing(['support_review']);
     }
+
+    public function test_admin_review_dashboard_summarizes_profile_and_task_coverage(): void
+    {
+        $admin = User::factory()->create(['user_type' => 'admin', 'portal_role' => 'expert']);
+        $teacher = User::factory()->create(['user_type' => 'teacher']);
+        $profile = Profile::factory()->create(['details' => [
+            'date_of_birth' => '2015-01-01', 'grade_level' => '5', 'school_name' => 'School',
+            'curriculum' => 'National', 'primary_language' => 'English', 'sleep_hours' => 9,
+            'activity_days' => 5, 'interests' => ['Art'],
+        ]]);
+        $group = \App\Models\LearningGroup::create(['teacher_user_id' => $teacher->id, 'name' => 'Class A', 'school_name' => 'School']);
+        $group->profiles()->attach($profile->id);
+
+        $this->actingAs($admin, 'sanctum')->getJson('/api/portal/review')
+            ->assertOk()
+            ->assertJsonPath('data.viewer_role', 'expert')
+            ->assertJsonPath('data.summary.students', 1)
+            ->assertJsonPath('data.students.0.profile_completion', 100);
+    }
+
+    public function test_non_admin_cannot_open_review_dashboard(): void
+    {
+        $this->actingAs(User::factory()->create(), 'sanctum')->getJson('/api/portal/review')->assertForbidden();
+    }
 }

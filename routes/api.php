@@ -36,4 +36,5 @@ Route::post('/game-sessions/{gameSession}/complete', [GameController::class, 'co
 Route::get('/profiles/{profile}/development', [DevelopmentProfileController::class, 'show'])->middleware('auth:sanctum');
 Route::get('/portal/parent', [PortalController::class, 'parentOverview'])->middleware('auth:sanctum');
 Route::get('/portal/teacher', [PortalController::class, 'teacherOverview'])->middleware('auth:sanctum');
+Route::get('/portal/review', [PortalController::class, 'reviewOverview'])->middleware('auth:sanctum');
 Route::post('/scenario-coach/respond', [ScenarioCoachController::class, 'respond'])->middleware('auth:sanctum');

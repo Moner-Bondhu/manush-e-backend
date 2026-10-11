@@ -65,20 +65,21 @@ class DemoSchoolSeeder extends Seeder
                     ['relationship' => $index % 2 ? 'mother' : 'guardian', 'is_primary' => true]
                 );
                 $profileIds[] = $child->id;
-
-                if ($student['complete']) {
-                    $this->seedEvidence($child, $index);
-                }
+                $studentLogin = User::updateOrCreate(
+                    ['phone_number' => '+88017000000'.(21 + $index)],
+                    ['name' => $student['student'], 'experiment_tag' => 'demo_school', 'user_type' => 'user', 'portal_role' => 'student', 'is_onboarded' => true]
+                );
+                ProfileUserAssignment::updateOrCreate(
+                    ['profile_id' => $child->id, 'user_id' => $studentLogin->id, 'role' => 'student'],
+                    ['relationship' => 'self', 'is_primary' => true]
+                );
+                $this->seedEvidence($child, $index, [1, .7, .35, 0][$index]);
+                $this->seedAdultEvidence($child, 'parent', [1, .5, .25, 0][$index]);
+                $this->seedAdultEvidence($child, 'teacher', [.75, 1, .5, 0][$index]);
             }
 
-            $studentLogin = User::updateOrCreate(
-                ['phone_number' => '+8801700000021'],
-                ['name' => 'Aarav Sen', 'experiment_tag' => 'demo_school', 'user_type' => 'user', 'portal_role' => 'student', 'is_onboarded' => true]
-            );
-            ProfileUserAssignment::updateOrCreate(
-                ['profile_id' => $profileIds[0], 'user_id' => $studentLogin->id, 'role' => 'student'],
-                ['relationship' => 'self', 'is_primary' => true]
-            );
+            User::updateOrCreate(['phone_number' => '+8801700000030'], ['name' => 'School Administrator', 'experiment_tag' => 'demo_school', 'user_type' => 'admin', 'portal_role' => 'admin', 'is_onboarded' => true]);
+            User::updateOrCreate(['phone_number' => '+8801700000031'], ['name' => 'Dr. Nabila Karim', 'experiment_tag' => 'demo_school', 'user_type' => 'admin', 'portal_role' => 'expert', 'is_onboarded' => true]);
 
             $group->profiles()->sync($profileIds);
         });
@@ -94,7 +95,7 @@ class DemoSchoolSeeder extends Seeder
             'primary_language' => $index % 2 ? 'Bangla and English' : 'English and Bangla',
             'interests' => $student['interests'],
         ];
-        if (! $student['complete']) {
+        if ($index >= 2) {
             $base['support_review'] = $index === 2 ? [
                 'priority' => 'priority',
                 'summary' => 'Recent teacher and family observations suggest a timely human review would be useful. / সাম্প্রতিক শিক্ষক ও পারিবারিক পর্যবেক্ষণ অনুযায়ী দ্রুত মানবিক পর্যালোচনা উপকারী হতে পারে।',
@@ -102,10 +103,12 @@ class DemoSchoolSeeder extends Seeder
                 'teacher_actions' => ['Arrange a private check-in with the school counsellor. / স্কুল কাউন্সেলরের সঙ্গে ব্যক্তিগত আলোচনার ব্যবস্থা করুন।', 'Keep academic tasks predictable while more context is gathered. / আরও তথ্য সংগ্রহের সময় শিক্ষার কাজগুলো পূর্বানুমেয় রাখুন।'],
                 'parent_actions' => ['Share recent changes with the school support contact. / সাম্প্রতিক পরিবর্তন স্কুলের সহায়তা প্রতিনিধিকে জানান।'],
             ] : ['priority' => 'context_needed'];
+            if ($index === 2) unset($base['interests']);
+            if ($index === 3) $base = array_intersect_key($base, array_flip(['date_of_birth', 'grade_level', 'support_review']));
             return $base;
         }
 
-        return array_merge($base, [
+        $details = array_merge($base, [
             'gender_identity' => $student['gender'],
             'curriculum' => 'National curriculum with English enrichment',
             'strong_subjects' => $index ? ['Science', 'Physical Education'] : ['Art', 'Mathematics'],
@@ -141,6 +144,8 @@ class DemoSchoolSeeder extends Seeder
                 'summary' => 'Current information supports continuing routine observation and strengths-based learning. / বর্তমান তথ্য অনুযায়ী নিয়মিত পর্যবেক্ষণ ও শক্তিভিত্তিক শেখা চালিয়ে যাওয়া উপযোগী।',
             ],
         ]);
+        if ($index === 1) unset($details['sleep_hours'], $details['activity_days']);
+        return $details;
     }
 
     private function parentDetails(array $student, int $index): array
@@ -176,29 +181,38 @@ class DemoSchoolSeeder extends Seeder
         ];
     }
 
-    private function seedEvidence(Profile $profile, int $studentIndex): void
+    private function seedEvidence(Profile $profile, int $studentIndex, float $ratio): void
     {
-        Scale::where('is_published', true)->where('visible_to', 'child')->with('questions.options')->get()->each(function ($scale) use ($profile, $studentIndex) {
-            foreach ($scale->questions as $questionIndex => $question) {
+        $questions = Scale::where('is_published', true)->where('visible_to', 'child')->with('questions.options')->get()->flatMap->questions->values();
+        $limit = (int) round($questions->count() * $ratio);
+        $questions->take($limit)->each(function ($question, $questionIndex) use ($profile, $studentIndex) {
                 $option = $question->options->get(($questionIndex + $studentIndex) % max(1, $question->options->count()));
-                if (! $option) {
-                    continue;
-                }
                 Response::updateOrCreate(
                     ['profile_id' => $profile->id, 'question_id' => $question->id],
-                    ['option_id' => $option->id, 'numeric_answer' => $option->value, 'text_answer' => null]
+                    ['option_id' => $option?->id, 'numeric_answer' => $option?->value, 'text_answer' => $option ? null : 'A thoughtful generated demo response showing the learner’s approach and ideas.']
                 );
-            }
         });
 
-        foreach ([
+        collect([
             ['attention', 'sustained_attention', 0.72], ['working_memory', 'sequence_accuracy', 0.68],
             ['planning', 'planning_efficiency', 0.76], ['social_emotional', 'perspective_taking', 0.81],
-        ] as [$domain, $feature, $value]) {
+        ])->take((int) round(4 * $ratio))->each(function ($item) use ($profile, $studentIndex) {
+            [$domain, $feature, $value] = $item;
             ChildFeatureSnapshot::updateOrCreate(
                 ['profile_id' => $profile->id, 'domain' => $domain, 'feature' => $feature, 'source_type' => 'demo_baseline'],
                 ['value' => $value + ($studentIndex * 0.03), 'source_id' => null, 'measured_at' => now()->subDays(7)]
             );
-        }
+        });
+    }
+
+    private function seedAdultEvidence(Profile $profile, string $audience, float $ratio): void
+    {
+        $questions = Scale::where('is_published', true)->where('visible_to', $audience)->with('questions.options')->get()->flatMap->questions->values();
+        $questions->take((int) round($questions->count() * $ratio))->each(function ($question) use ($profile) {
+            $option = $question->options->first();
+            Response::updateOrCreate(['profile_id' => $profile->id, 'question_id' => $question->id], [
+                'option_id' => $option?->id, 'numeric_answer' => $option?->value, 'text_answer' => $option ? null : 'Generated school-supported observation for demonstration.',
+            ]);
+        });
     }
 }
