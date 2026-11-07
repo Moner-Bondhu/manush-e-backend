@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -20,9 +20,11 @@ jobs:
           coverage: pcov
           extensions: mbstring, pdo_sqlite
 
-      - name: Install dependencies
-        run: |
-          composer self-update && composer install && composer dump-autoload
+      - name: Validate dependency files
+        run: composer validate --strict
+
+      - name: Install locked dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
 
       - name: Copy .env
         run: cp .env.example .env
