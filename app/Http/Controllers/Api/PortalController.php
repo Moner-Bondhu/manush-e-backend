@@ -9,11 +9,24 @@ use App\Models\Profile;
 use App\Models\Response;
 use App\Models\Scale;
 use App\Models\SupportCase;
+use App\Services\LongitudinalProfileService;
+use App\Services\SyntheticBenchmarkService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class PortalController extends BaseController
 {
+    public function studentProgress(Request $request)
+    {
+        $profile = $request->user()->assignedProfiles()->wherePivot('role', 'student')->where('type', 'child')->first()
+            ?? $request->user()->profiles()->where('type', 'child')->firstOrFail();
+
+        return $this->sendResponse('fetched', [
+            'profile_id' => $profile->id,
+            'progress' => app(LongitudinalProfileService::class)->build($profile),
+        ]);
+    }
+
     public function parentOverview(Request $request)
     {
         $child = $request->user()->assignedProfiles()->wherePivot('role', 'parent')->where('type', 'child')->first()
@@ -72,6 +85,7 @@ class PortalController extends BaseController
                 ],
             ],
             'students' => $profiles->map(fn ($profile) => $this->profileSummary($profile, 'expert'))->values(),
+            'synthetic_benchmark' => app(SyntheticBenchmarkService::class)->report(),
         ]);
     }
 
@@ -97,6 +111,8 @@ class PortalController extends BaseController
         ];
         $summary['source_evidence'] = $this->sourceEvidence($profile);
         $summary['assessment_report'] = $this->assessmentReport($profile, $summary);
+        $summary['longitudinal_profile'] = app(LongitudinalProfileService::class)->build($profile);
+        $summary['reported_context'] = app(LongitudinalProfileService::class)->reportedContext($profile);
 
         return $this->sendResponse('fetched', $summary);
     }

@@ -278,16 +278,26 @@ class DemoSchoolSeeder extends Seeder
                 );
         });
 
-        collect([
+        $features = collect([
             ['attention', 'sustained_attention', 0.72], ['working_memory', 'sequence_accuracy', 0.68],
             ['planning', 'planning_efficiency', 0.76], ['social_emotional', 'perspective_taking', 0.81],
-        ])->take((int) round(4 * $ratio))->each(function ($item) use ($profile, $studentIndex) {
-            [$domain, $feature, $value] = $item;
-            ChildFeatureSnapshot::updateOrCreate(
-                ['profile_id' => $profile->id, 'domain' => $domain, 'feature' => $feature, 'source_type' => 'demo_baseline'],
-                ['value' => $value + ($studentIndex * 0.03), 'source_id' => null, 'measured_at' => now()->subDays(7)]
-            );
-        });
+        ])->take((int) round(4 * $ratio));
+        ChildFeatureSnapshot::where('profile_id', $profile->id)
+            ->where(fn ($query) => $query->where('source_type', 'like', 'demo_week_%')->orWhere('source_type', 'demo_baseline'))
+            ->delete();
+        $weeks = $ratio >= 1 ? 4 : ($ratio > 0 ? 2 : 0);
+        foreach ($weeks ? range(1, $weeks) : [] as $week) {
+            $features->each(function ($item) use ($profile, $studentIndex, $week, $weeks) {
+                [$domain, $feature, $value] = $item;
+                $direction = $studentIndex === 1 && $domain === 'planning' ? 0.01 : 0.025;
+                $adjusted = min(.95, $value + ($studentIndex * 0.015) + (($week - 1) * $direction));
+                ChildFeatureSnapshot::create([
+                    'profile_id' => $profile->id, 'domain' => $domain, 'feature' => $feature,
+                    'source_type' => 'demo_week_'.$week, 'source_id' => null,
+                    'value' => $adjusted, 'measured_at' => now()->subWeeks($weeks - $week),
+                ]);
+            });
+        }
     }
 
     private function seedAdultEvidence(Profile $profile, string $audience, float $ratio): void

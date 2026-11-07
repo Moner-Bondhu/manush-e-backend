@@ -11,6 +11,7 @@ use App\Models\ProfileUserAssignment;
 use App\Models\Response;
 use App\Models\Scale;
 use App\Models\SupportCase;
+use App\Models\ChildFeatureSnapshot;
 use App\Models\User;
 use Database\Seeders\MeasurementLibrarySeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -331,7 +332,9 @@ class ApiControllerTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.viewer_role', 'expert')
             ->assertJsonPath('data.summary.students', 1)
-            ->assertJsonPath('data.students.0.profile_completion', 100);
+            ->assertJsonPath('data.students.0.profile_completion', 100)
+            ->assertJsonPath('data.synthetic_benchmark.dataset.synthetic', true)
+            ->assertJsonStructure(['data' => ['synthetic_benchmark' => ['metrics' => ['all' => ['sensitivity', 'specificity', 'precision', 'f1']]]]]);
     }
 
     public function test_non_admin_cannot_open_review_dashboard(): void
@@ -349,7 +352,24 @@ class ApiControllerTest extends TestCase
 
         $this->actingAs($expert, 'sanctum')->getJson("/api/portal/review/{$profile->id}")
             ->assertOk()
-            ->assertJsonStructure(['data' => ['source_coverage' => ['student', 'parent', 'teacher'], 'source_tasks', 'source_evidence', 'assessment_report' => ['evidence_confidence', 'interpretation_limits']]]);
+            ->assertJsonStructure(['data' => ['source_coverage' => ['student', 'parent', 'teacher'], 'source_tasks', 'source_evidence', 'assessment_report' => ['evidence_confidence', 'interpretation_limits'], 'longitudinal_profile', 'reported_context' => ['academic', 'health']]]);
+    }
+
+    public function test_student_sees_practice_progress_without_professional_interpretation(): void
+    {
+        $student = User::factory()->create(['portal_role' => 'student']);
+        $profile = Profile::factory()->create(['type' => 'child']);
+        ProfileUserAssignment::create(['profile_id' => $profile->id, 'user_id' => $student->id, 'role' => 'student']);
+        foreach ([['2026-09-01', 55], ['2026-10-01', 72]] as [$date, $value]) {
+            ChildFeatureSnapshot::create(['profile_id' => $profile->id, 'domain' => 'attention', 'feature' => 'task_accuracy', 'value' => $value, 'source_type' => 'game_session', 'measured_at' => $date]);
+        }
+
+        $this->actingAs($student, 'sanctum')->getJson('/api/portal/student/progress')
+            ->assertOk()
+            ->assertJsonPath('data.progress.dimensions.0.key', 'attention_control')
+            ->assertJsonPath('data.progress.dimensions.0.change', 17)
+            ->assertJsonMissing(['professional_formulation'])
+            ->assertJsonMissing(['support_case']);
     }
 
     public function test_expert_can_assign_a_student_support_path(): void

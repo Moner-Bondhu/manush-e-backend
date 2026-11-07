@@ -34,6 +34,7 @@ Route::post('/games/{game}/sessions', [GameController::class, 'start'])->middlew
 Route::post('/game-sessions/{gameSession}/events', [GameController::class, 'recordEvents'])->middleware('auth:sanctum');
 Route::post('/game-sessions/{gameSession}/complete', [GameController::class, 'complete'])->middleware('auth:sanctum');
 Route::get('/profiles/{profile}/development', [DevelopmentProfileController::class, 'show'])->middleware('auth:sanctum');
+Route::get('/portal/student/progress', [PortalController::class, 'studentProgress'])->middleware('auth:sanctum');
 Route::get('/portal/parent', [PortalController::class, 'parentOverview'])->middleware('auth:sanctum');
 Route::post('/portal/parent/support-consent', [PortalController::class, 'parentSupportConsent'])->middleware('auth:sanctum');
 Route::get('/portal/teacher', [PortalController::class, 'teacherOverview'])->middleware('auth:sanctum');

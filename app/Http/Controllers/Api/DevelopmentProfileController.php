@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\LearningGroup;
 use App\Models\Profile;
+use App\Services\LongitudinalProfileService;
 use Illuminate\Http\Request;
 
 class DevelopmentProfileController extends BaseController
@@ -35,6 +36,7 @@ class DevelopmentProfileController extends BaseController
         return $this->sendResponse('fetched', [
             'profile_id' => $profile->id,
             'features' => $features,
+            'progress' => app(LongitudinalProfileService::class)->build($profile),
         ]);
     }
 }
