@@ -34,7 +34,7 @@ class LongitudinalProfileService
                 'baseline' => $baseline,
                 'current' => $current,
                 'change' => $current - $baseline,
-                'trend' => $current > $baseline + 3 ? 'improving' : ($current < $baseline - 3 ? 'variable_or_lower' : 'stable'),
+                'trend' => $points->count() < 3 ? 'insufficient_repeats' : ($current > $baseline + 3 ? 'improving' : ($current < $baseline - 3 ? 'variable_or_lower' : 'stable')),
                 'sessions' => $points->count(),
                 'observations' => $items->count(),
                 'series' => $points,
