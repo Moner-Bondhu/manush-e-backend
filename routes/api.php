@@ -38,4 +38,5 @@ Route::get('/portal/parent', [PortalController::class, 'parentOverview'])->middl
 Route::get('/portal/teacher', [PortalController::class, 'teacherOverview'])->middleware('auth:sanctum');
 Route::get('/portal/review', [PortalController::class, 'reviewOverview'])->middleware('auth:sanctum');
 Route::get('/portal/review/{profile}', [PortalController::class, 'reviewCase'])->middleware('auth:sanctum');
+Route::put('/portal/review/{profile}', [PortalController::class, 'updateReviewCase'])->middleware('auth:sanctum');
 Route::post('/scenario-coach/respond', [ScenarioCoachController::class, 'respond'])->middleware('auth:sanctum');

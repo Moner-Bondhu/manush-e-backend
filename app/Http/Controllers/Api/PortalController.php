@@ -8,7 +8,9 @@ use App\Models\LearningGroup;
 use App\Models\Profile;
 use App\Models\Response;
 use App\Models\Scale;
+use App\Models\SupportCase;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class PortalController extends BaseController
 {
@@ -34,7 +36,7 @@ class PortalController extends BaseController
     public function reviewOverview(Request $request)
     {
         abort_unless($request->user()->user_type === 'admin', 403);
-        $profiles = LearningGroup::with('profiles')->get()->flatMap->profiles->unique('id');
+        $profiles = LearningGroup::with('profiles.supportCase.assignedExpert')->get()->flatMap->profiles->unique('id');
 
         return $this->sendResponse('fetched', [
             'viewer_role' => $request->user()->portal_role,
@@ -43,6 +45,12 @@ class PortalController extends BaseController
                 'profile_average' => (int) round($profiles->avg(fn ($profile) => $this->profileCompletion($profile->details ?? [])) ?: 0),
                 'priority_reviews' => $profiles->filter(fn ($profile) => data_get($profile->details, 'support_review.priority') === 'priority')->count(),
                 'context_needed' => $profiles->filter(fn ($profile) => ! in_array(data_get($profile->details, 'support_review.priority'), ['routine', 'follow_up', 'priority'], true))->count(),
+                'service_paths' => [
+                    'individual_counseling' => $profiles->where('supportCase.service_path', 'individual_counseling')->count(),
+                    'group_support' => $profiles->where('supportCase.service_path', 'group_support')->count(),
+                    'general_guidance' => $profiles->where('supportCase.service_path', 'general_guidance')->count(),
+                    'assessment_pending' => $profiles->filter(fn ($profile) => ! $profile->supportCase || $profile->supportCase->service_path === 'assessment_pending')->count(),
+                ],
             ],
             'students' => $profiles->map(fn ($profile) => $this->profileSummary($profile, 'expert'))->values(),
         ]);
@@ -69,6 +77,25 @@ class PortalController extends BaseController
         ];
 
         return $this->sendResponse('fetched', $summary);
+    }
+
+    public function updateReviewCase(Request $request, Profile $profile)
+    {
+        abort_unless($request->user()->user_type === 'admin', 403);
+        abort_unless($profile->type === 'child' && $profile->learningGroups()->exists(), 404);
+        $data = $request->validate([
+            'service_path' => ['required', Rule::in(['assessment_pending', 'individual_counseling', 'group_support', 'general_guidance'])],
+            'status' => ['required', Rule::in(['new', 'reviewing', 'contact_planned', 'active', 'monitoring', 'closed'])],
+            'priority' => ['required', Rule::in(['routine', 'follow_up', 'priority'])],
+            'assigned_expert_user_id' => ['nullable', 'integer', Rule::exists('users', 'id')->where('portal_role', 'expert')],
+            'rationale' => ['nullable', 'string', 'max:2000'],
+            'professional_notes' => ['nullable', 'string', 'max:5000'],
+            'consent_status' => ['required', Rule::in(['not_recorded', 'pending', 'recorded', 'declined'])],
+            'next_review_at' => ['nullable', 'date'],
+        ]);
+        $case = SupportCase::updateOrCreate(['profile_id' => $profile->id], $data);
+
+        return $this->sendResponse('updated', $this->supportCaseData($case->fresh('assignedExpert')));
     }
 
     private function sourceCoverage($tasks): array
@@ -119,6 +146,28 @@ class PortalController extends BaseController
             'assigned_tasks' => $this->taskFeed($profile, $audience),
             'personalization' => $this->personalization($profile, $audience),
             'support_review' => $this->supportReview($profile, $audience),
+            'support_case' => $audience === 'expert' ? $this->supportCaseData($profile->supportCase) : null,
+        ];
+    }
+
+    private function supportCaseData(?SupportCase $case): array
+    {
+        if (! $case) return [
+            'service_path' => 'assessment_pending', 'status' => 'new', 'priority' => 'routine',
+            'assigned_expert_user_id' => null, 'assigned_expert_name' => null, 'rationale' => null,
+            'professional_notes' => null, 'consent_status' => 'not_recorded', 'next_review_at' => null,
+        ];
+
+        return [
+            'service_path' => $case->service_path,
+            'status' => $case->status,
+            'priority' => $case->priority,
+            'assigned_expert_user_id' => $case->assigned_expert_user_id,
+            'assigned_expert_name' => $case->assignedExpert?->name,
+            'rationale' => $case->rationale,
+            'professional_notes' => $case->professional_notes,
+            'consent_status' => $case->consent_status,
+            'next_review_at' => optional($case->next_review_at)->format('Y-m-d'),
         ];
     }
 

@@ -80,4 +80,9 @@ class Profile extends Model
     {
         return $this->hasMany(ProfileUserAssignment::class);
     }
+
+    public function supportCase()
+    {
+        return $this->hasOne(SupportCase::class);
+    }
 }

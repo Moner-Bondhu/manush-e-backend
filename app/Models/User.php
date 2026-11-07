@@ -85,4 +85,9 @@ class User extends Authenticatable
         return $this->belongsToMany(Profile::class, 'profile_user_assignments')
             ->withPivot(['role', 'relationship', 'is_primary']);
     }
+
+    public function assignedSupportCases()
+    {
+        return $this->hasMany(SupportCase::class, 'assigned_expert_user_id');
+    }
 }

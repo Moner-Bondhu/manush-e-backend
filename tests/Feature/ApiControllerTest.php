@@ -349,4 +349,24 @@ class ApiControllerTest extends TestCase
             ->assertOk()
             ->assertJsonStructure(['data' => ['source_coverage' => ['student', 'parent', 'teacher'], 'source_tasks']]);
     }
+
+    public function test_expert_can_assign_a_student_support_path(): void
+    {
+        $expert = User::factory()->create(['user_type' => 'admin', 'portal_role' => 'expert']);
+        $teacher = User::factory()->create(['user_type' => 'teacher']);
+        $profile = Profile::factory()->create(['type' => 'child']);
+        $group = LearningGroup::create(['teacher_user_id' => $teacher->id, 'name' => 'Class A']);
+        $group->profiles()->attach($profile);
+
+        $this->actingAs($expert, 'sanctum')->putJson("/api/portal/review/{$profile->id}", [
+            'service_path' => 'individual_counseling', 'status' => 'reviewing', 'priority' => 'priority',
+            'assigned_expert_user_id' => $expert->id, 'rationale' => 'Human-reviewed multi-source context.',
+            'professional_notes' => 'Contact the school support lead.', 'consent_status' => 'pending',
+            'next_review_at' => now()->addWeek()->toDateString(),
+        ])->assertOk()
+            ->assertJsonPath('data.service_path', 'individual_counseling')
+            ->assertJsonPath('data.assigned_expert_name', $expert->name);
+
+        $this->assertDatabaseHas('support_cases', ['profile_id' => $profile->id, 'status' => 'reviewing']);
+    }
 }
