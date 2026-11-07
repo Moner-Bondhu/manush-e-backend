@@ -306,7 +306,8 @@ class ApiControllerTest extends TestCase
         $this->actingAs($parent, 'sanctum')->getJson('/api/portal/parent')
             ->assertOk()
             ->assertJsonPath('data.support_review.priority', 'priority')
-            ->assertJsonPath('data.support_review.expert_referral.provider', 'Moner Bondhu');
+            ->assertJsonPath('data.support_review.expert_referral.provider', 'Moner Bondhu')
+            ->assertJsonMissing(['support_case']);
 
         $this->actingAs($student, 'sanctum')->getJson('/api/user')
             ->assertOk()

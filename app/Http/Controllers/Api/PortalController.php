@@ -104,7 +104,7 @@ class PortalController extends BaseController
         $complete = $tasks->filter(fn ($task) => ($task['status'] ?? null) === 'complete' || ($task['complete'] ?? false))->count();
         $started = $tasks->filter(fn ($task) => ($task['responses'] ?? 0) > 0)->count();
 
-        return [
+        $summary = [
             'complete' => $complete,
             'started' => $started,
             'total' => $total,
@@ -146,8 +146,12 @@ class PortalController extends BaseController
             'assigned_tasks' => $this->taskFeed($profile, $audience),
             'personalization' => $this->personalization($profile, $audience),
             'support_review' => $this->supportReview($profile, $audience),
-            'support_case' => $audience === 'expert' ? $this->supportCaseData($profile->supportCase) : null,
         ];
+        if ($audience === 'expert') {
+            $summary['support_case'] = $this->supportCaseData($profile->supportCase);
+        }
+
+        return $summary;
     }
 
     private function supportCaseData(?SupportCase $case): array
