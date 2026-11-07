@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Models\GameSession;
 use App\Models\ChildFeatureSnapshot;
 use App\Models\LearningGroup;
+use App\Models\Profile;
 use App\Models\Response;
 use App\Models\Scale;
 use Illuminate\Http\Request;
@@ -41,9 +42,47 @@ class PortalController extends BaseController
                 'students' => $profiles->count(),
                 'profile_average' => (int) round($profiles->avg(fn ($profile) => $this->profileCompletion($profile->details ?? [])) ?: 0),
                 'priority_reviews' => $profiles->filter(fn ($profile) => data_get($profile->details, 'support_review.priority') === 'priority')->count(),
+                'context_needed' => $profiles->filter(fn ($profile) => ! in_array(data_get($profile->details, 'support_review.priority'), ['routine', 'follow_up', 'priority'], true))->count(),
             ],
             'students' => $profiles->map(fn ($profile) => $this->profileSummary($profile, 'expert'))->values(),
         ]);
+    }
+
+    public function reviewCase(Request $request, Profile $profile)
+    {
+        abort_unless($request->user()->user_type === 'admin', 403);
+        abort_unless($profile->type === 'child' && $profile->learningGroups()->exists(), 404);
+
+        $summary = $this->profileSummary($profile, 'expert');
+        $summary['context'] = collect($profile->details ?? [])->only([
+            'date_of_birth', 'grade_level', 'school_name', 'curriculum', 'primary_language',
+            'strong_subjects', 'support_subjects', 'interests', 'expression_preferences',
+        ]);
+        $summary['source_coverage'] = [
+            'student' => $this->sourceCoverage($summary['activities']),
+            'parent' => $this->sourceCoverage($this->taskFeed($profile, 'parent')),
+            'teacher' => $this->sourceCoverage($this->taskFeed($profile, 'teacher')),
+        ];
+        $summary['source_tasks'] = [
+            'parent' => $this->taskFeed($profile, 'parent'),
+            'teacher' => $this->taskFeed($profile, 'teacher'),
+        ];
+
+        return $this->sendResponse('fetched', $summary);
+    }
+
+    private function sourceCoverage($tasks): array
+    {
+        $total = $tasks->count();
+        $complete = $tasks->filter(fn ($task) => ($task['status'] ?? null) === 'complete' || ($task['complete'] ?? false))->count();
+        $started = $tasks->filter(fn ($task) => ($task['responses'] ?? 0) > 0)->count();
+
+        return [
+            'complete' => $complete,
+            'started' => $started,
+            'total' => $total,
+            'percent' => $total ? (int) round(($complete / $total) * 100) : 0,
+        ];
     }
 
     private function profileSummary($profile, string $audience): array

@@ -55,6 +55,7 @@ class ScaleController extends BaseController
                 : ($user->profiles()->where('type', $profile)->first()
                     ?? $user->assignedProfiles()->where('type', $profile)->firstOrFail());
             $this->authorizeProfile($request, $selectedProfile);
+            $this->authorizeAudience($request, $profile, $selectedProfile);
             $profile_id = $selectedProfile->id;
 
             // Transform the scales collection to include custom data
@@ -83,6 +84,8 @@ class ScaleController extends BaseController
             });
 
             return $this->sendResponse('fetched', $scales);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $exception) {
+            throw $exception;
         } catch (\Throwable $th) {
             return $this->sendError($th->getMessage(), $th->getLine(), 500);
         }
@@ -102,11 +105,16 @@ class ScaleController extends BaseController
     public function show(Request $request, $scale_id)
     {
         try {
-            if ($request->query('profile_id') !== null) {
-                $this->authorizeProfile($request, Profile::findOrFail((int) $request->query('profile_id')));
-            }
-            $scale = new ScaleResource(Scale::find($scale_id)->load('questions.options'));
+            $selectedProfile = $request->query('profile_id') !== null
+                ? Profile::findOrFail((int) $request->query('profile_id'))
+                : null;
+            if ($selectedProfile) $this->authorizeProfile($request, $selectedProfile);
+            $scaleModel = Scale::findOrFail($scale_id);
+            $this->authorizeAudience($request, $scaleModel->visible_to, $selectedProfile);
+            $scale = new ScaleResource($scaleModel->load('questions.options'));
             return $this->sendResponse('fetched', $scale);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $exception) {
+            throw $exception;
         } catch (\Throwable $th) {
             //throw $th;
             return $this->sendError($th->getMessage(), $th->getLine(), 500);
@@ -137,5 +145,13 @@ class ScaleController extends BaseController
         $teaches = LearningGroup::where('teacher_user_id', $user->id)
             ->whereHas('profiles', fn ($query) => $query->whereKey($profile->id))->exists();
         abort_unless($owns || $assigned || $teaches || $user->user_type === 'admin', 403);
+    }
+
+    private function authorizeAudience(Request $request, string $audience, ?Profile $profile): void
+    {
+        $user = $request->user();
+        $role = $user->portal_role ?: ($user->user_type === 'teacher' ? 'teacher' : null);
+        $owns = $profile && $user->profiles()->whereKey($profile->id)->exists();
+        abort_unless($user->user_type === 'admin' || $role === $audience || ($role === null && ($profile === null || $owns)), 403);
     }
 }

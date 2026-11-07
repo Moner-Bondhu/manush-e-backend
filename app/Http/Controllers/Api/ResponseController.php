@@ -48,6 +48,8 @@ class ResponseController extends BaseController
             $teaches = LearningGroup::where('teacher_user_id', $user->id)
                 ->whereHas('profiles', fn ($query) => $query->whereKey($profile->id))->exists();
             abort_unless($owns || $assigned || $teaches || $user->user_type === 'admin', 403);
+            $role = $user->portal_role ?: ($user->user_type === 'teacher' ? 'teacher' : null);
+            abort_unless($user->user_type === 'admin' || $role === $scale->visible_to || ($role === null && $owns), 403);
 
             $response = Response::where('profile_id', $profile->id)->where('question_id', $question_id)->first();
 

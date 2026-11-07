@@ -8,7 +8,6 @@ use App\Models\GameDefinition;
 use App\Models\GameEvent;
 use App\Models\GameSession;
 use App\Models\GameProgress;
-use App\Models\LearningGroup;
 use App\Models\Profile;
 use Illuminate\Http\Request;
 
@@ -110,9 +109,9 @@ class GameController extends BaseController
         $user = $request->user();
         $owns = $user->profiles()->whereKey($profile->id)->exists();
         $assigned = $user->assignedProfiles()->whereKey($profile->id)->exists();
-        $teaches = LearningGroup::where('teacher_user_id', $user->id)
-            ->whereHas('profiles', fn ($query) => $query->whereKey($profile->id))->exists();
-        abort_unless($owns || $assigned || $teaches || $user->user_type === 'admin', 403);
+        $studentRole = $user->portal_role === 'student';
+        $legacyOwner = $user->portal_role === null && $owns;
+        abort_unless(($studentRole && $assigned) || $legacyOwner, 403);
     }
 
 }

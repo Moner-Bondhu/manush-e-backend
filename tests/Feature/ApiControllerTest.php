@@ -242,19 +242,19 @@ class ApiControllerTest extends TestCase
         ])->assertUnprocessable();
     }
 
-    public function test_teacher_can_open_and_advance_an_assigned_student_activity(): void
+    public function test_teacher_can_open_and_advance_an_assigned_teacher_activity(): void
     {
         $teacher = User::factory()->create(['user_type' => 'teacher']);
         $family = User::factory()->create();
         $profile = Profile::factory()->create(['user_id' => $family->id, 'type' => 'child']);
         $group = LearningGroup::create(['teacher_user_id' => $teacher->id, 'name' => 'Demo Class']);
         $group->profiles()->attach($profile);
-        $scale = Scale::factory()->create(['visible_to' => 'child', 'code' => 'TEACHER-PREVIEW', 'is_published' => true]);
+        $scale = Scale::factory()->create(['visible_to' => 'teacher', 'code' => 'TEACHER-OBSERVATION', 'is_published' => true]);
         $question = Question::factory()->create(['scale_id' => $scale->id]);
         $option = Option::factory()->create(['question_id' => $question->id]);
         Sanctum::actingAs($teacher);
 
-        $this->getJson("/api/scales/child?profile_id={$profile->id}")
+        $this->getJson("/api/scales/teacher?profile_id={$profile->id}")
             ->assertOk()
             ->assertJsonPath('data.0.response_count', 0);
 
@@ -263,10 +263,29 @@ class ApiControllerTest extends TestCase
             'option_id' => $option->id,
         ])->assertOk();
 
-        $activity = collect($this->getJson("/api/scales/child?profile_id={$profile->id}")
+        $activity = collect($this->getJson("/api/scales/teacher?profile_id={$profile->id}")
             ->assertOk()->json('data'))->firstWhere('id', $scale->id);
         $this->assertSame(1, $activity['response_count']);
         $this->assertSame('complete', $activity['status']);
+    }
+
+    public function test_teacher_cannot_submit_student_questionnaire_answers(): void
+    {
+        $teacher = User::factory()->create(['user_type' => 'teacher', 'portal_role' => 'teacher']);
+        $profile = Profile::factory()->create(['type' => 'child']);
+        $group = LearningGroup::create(['teacher_user_id' => $teacher->id, 'name' => 'Demo Class']);
+        $group->profiles()->attach($profile);
+        $scale = Scale::factory()->create(['visible_to' => 'child', 'code' => 'CHILD-ONLY', 'is_published' => true]);
+        $question = Question::factory()->create(['scale_id' => $scale->id]);
+        $option = Option::factory()->create(['question_id' => $question->id]);
+
+        $this->actingAs($teacher, 'sanctum')
+            ->getJson("/api/scales/child?profile_id={$profile->id}")
+            ->assertForbidden();
+
+        $this->actingAs($teacher, 'sanctum')
+            ->postJson("/api/question/respond/{$question->id}", ['profile_id' => $profile->id, 'option_id' => $option->id])
+            ->assertForbidden();
     }
 
     public function test_parent_support_review_is_adult_only_and_includes_referral_for_priority_case(): void
@@ -316,5 +335,18 @@ class ApiControllerTest extends TestCase
     public function test_non_admin_cannot_open_review_dashboard(): void
     {
         $this->actingAs(User::factory()->create(), 'sanctum')->getJson('/api/portal/review')->assertForbidden();
+    }
+
+    public function test_expert_can_open_an_enrolled_student_case_with_source_coverage(): void
+    {
+        $expert = User::factory()->create(['user_type' => 'admin', 'portal_role' => 'expert']);
+        $teacher = User::factory()->create(['user_type' => 'teacher']);
+        $profile = Profile::factory()->create(['type' => 'child']);
+        $group = LearningGroup::create(['teacher_user_id' => $teacher->id, 'name' => 'Class A']);
+        $group->profiles()->attach($profile);
+
+        $this->actingAs($expert, 'sanctum')->getJson("/api/portal/review/{$profile->id}")
+            ->assertOk()
+            ->assertJsonStructure(['data' => ['source_coverage' => ['student', 'parent', 'teacher'], 'source_tasks']]);
     }
 }
