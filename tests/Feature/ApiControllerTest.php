@@ -352,7 +352,7 @@ class ApiControllerTest extends TestCase
 
         $this->actingAs($expert, 'sanctum')->getJson("/api/portal/review/{$profile->id}")
             ->assertOk()
-            ->assertJsonStructure(['data' => ['source_coverage' => ['student', 'parent', 'teacher'], 'source_tasks', 'source_evidence', 'assessment_report' => ['evidence_confidence', 'interpretation_limits'], 'longitudinal_profile', 'reported_context' => ['academic', 'health']]]);
+            ->assertJsonStructure(['data' => ['source_coverage' => ['student', 'parent', 'teacher'], 'source_tasks', 'source_evidence', 'assessment_report' => ['evidence_confidence', 'interpretation_limits'], 'longitudinal_profile', 'professional_measurement_report' => ['overall_coverage', 'domains', 'instrument_register', 'professional_rules'], 'reported_context' => ['academic', 'health']]]);
     }
 
     public function test_student_sees_practice_progress_without_professional_interpretation(): void

@@ -11,6 +11,7 @@ use App\Models\Scale;
 use App\Models\SupportCase;
 use App\Services\LongitudinalProfileService;
 use App\Services\SyntheticBenchmarkService;
+use App\Services\ProfessionalMeasurementReportService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -113,6 +114,7 @@ class PortalController extends BaseController
         $summary['source_evidence'] = $this->sourceEvidence($profile);
         $summary['assessment_report'] = $this->assessmentReport($profile, $summary);
         $summary['longitudinal_profile'] = app(LongitudinalProfileService::class)->build($profile);
+        $summary['professional_measurement_report'] = app(ProfessionalMeasurementReportService::class)->build($profile, $summary['longitudinal_profile']);
         $summary['reported_context'] = app(LongitudinalProfileService::class)->reportedContext($profile);
 
         return $this->sendResponse('fetched', $summary);
