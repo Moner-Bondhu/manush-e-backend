@@ -40,7 +40,7 @@ class DemoSchoolSeeder extends Seeder
             );
 
             $students = [
-                ['phone' => '+8801700000011', 'student' => 'Aarav Sen', 'parent' => 'Maya Sen', 'gender' => 'male', 'dob' => '2015-03-12', 'complete' => true, 'strengths' => ['Visual reasoning', 'Storytelling', 'Curiosity'], 'interests' => ['Drawing', 'Space', 'Building']],
+                ['phone' => '+8801700000011', 'student' => 'Ayaan Rahman', 'parent' => 'Nadia Rahman', 'gender' => 'male', 'dob' => '2015-03-12', 'complete' => true, 'strengths' => ['Visual reasoning', 'Storytelling', 'Curiosity'], 'interests' => ['Drawing', 'Space', 'Building']],
                 ['phone' => '+8801700000012', 'student' => 'Nusrat Jahan', 'parent' => 'Samira Jahan', 'gender' => 'female', 'dob' => '2015-07-24', 'complete' => true, 'strengths' => ['Collaboration', 'Pattern finding', 'Empathy'], 'interests' => ['Football', 'Animals', 'Music']],
                 ['phone' => '+8801700000013', 'student' => 'Rafi Islam', 'parent' => 'Tariq Islam', 'gender' => 'male', 'dob' => '2015-01-18', 'complete' => false, 'strengths' => ['Hands-on exploration'], 'interests' => ['Machines', 'Cricket']],
                 ['phone' => '+8801700000014', 'student' => 'Anika Das', 'parent' => 'Rina Das', 'gender' => 'female', 'dob' => '2015-10-05', 'complete' => false, 'strengths' => ['Imagination'], 'interests' => ['Dance', 'Comics']],
