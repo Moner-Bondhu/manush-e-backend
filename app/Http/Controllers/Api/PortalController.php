@@ -68,7 +68,8 @@ class PortalController extends BaseController
     public function reviewOverview(Request $request)
     {
         abort_unless($request->user()->user_type === 'admin', 403);
-        $profiles = LearningGroup::with('profiles.supportCase.assignedExpert')->get()->flatMap->profiles->unique('id');
+        $profiles = LearningGroup::with(['profiles.user', 'profiles.supportCase.assignedExpert'])->get()->flatMap->profiles
+            ->unique('id')->filter(fn ($profile) => $profile->user?->experiment_tag !== 'local_demo')->values();
 
         return $this->sendResponse('fetched', [
             'viewer_role' => $request->user()->portal_role,
@@ -92,7 +93,7 @@ class PortalController extends BaseController
     public function reviewCase(Request $request, Profile $profile)
     {
         abort_unless($request->user()->user_type === 'admin', 403);
-        abort_unless($profile->type === 'child' && $profile->learningGroups()->exists(), 404);
+        abort_unless($profile->type === 'child' && $profile->user?->experiment_tag !== 'local_demo' && $profile->learningGroups()->exists(), 404);
 
         $summary = $this->profileSummary($profile, 'expert');
         $summary['context'] = collect($profile->details ?? [])->only([
@@ -120,7 +121,7 @@ class PortalController extends BaseController
     public function updateReviewCase(Request $request, Profile $profile)
     {
         abort_unless($request->user()->user_type === 'admin', 403);
-        abort_unless($profile->type === 'child' && $profile->learningGroups()->exists(), 404);
+        abort_unless($profile->type === 'child' && $profile->user?->experiment_tag !== 'local_demo' && $profile->learningGroups()->exists(), 404);
         $data = $request->validate([
             'service_path' => ['required', Rule::in(['assessment_pending', 'individual_counseling', 'group_support', 'general_guidance'])],
             'status' => ['required', Rule::in(['new', 'reviewing', 'contact_planned', 'active', 'monitoring', 'closed'])],
