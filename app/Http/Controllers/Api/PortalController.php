@@ -104,7 +104,7 @@ class PortalController extends BaseController
         $complete = $tasks->filter(fn ($task) => ($task['status'] ?? null) === 'complete' || ($task['complete'] ?? false))->count();
         $started = $tasks->filter(fn ($task) => ($task['responses'] ?? 0) > 0)->count();
 
-        $summary = [
+        return [
             'complete' => $complete,
             'started' => $started,
             'total' => $total,
@@ -120,7 +120,7 @@ class PortalController extends BaseController
         });
         $completedTasks = $scales->where('complete', true)->count();
         $totalTasks = $scales->count();
-        return [
+        $summary = [
             'id' => $profile->id,
             'name' => $profile->full_name,
             'profile_completion' => $this->profileCompletion($profile->details ?? []),
