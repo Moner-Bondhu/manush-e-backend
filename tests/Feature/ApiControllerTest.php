@@ -10,6 +10,7 @@ use App\Models\LearningGroup;
 use App\Models\ProfileUserAssignment;
 use App\Models\Response;
 use App\Models\Scale;
+use App\Models\SupportCase;
 use App\Models\User;
 use Database\Seeders\MeasurementLibrarySeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -348,7 +349,7 @@ class ApiControllerTest extends TestCase
 
         $this->actingAs($expert, 'sanctum')->getJson("/api/portal/review/{$profile->id}")
             ->assertOk()
-            ->assertJsonStructure(['data' => ['source_coverage' => ['student', 'parent', 'teacher'], 'source_tasks']]);
+            ->assertJsonStructure(['data' => ['source_coverage' => ['student', 'parent', 'teacher'], 'source_tasks', 'source_evidence', 'assessment_report' => ['evidence_confidence', 'interpretation_limits']]]);
     }
 
     public function test_expert_can_assign_a_student_support_path(): void
@@ -364,10 +365,36 @@ class ApiControllerTest extends TestCase
             'assigned_expert_user_id' => $expert->id, 'rationale' => 'Human-reviewed multi-source context.',
             'professional_notes' => 'Contact the school support lead.', 'consent_status' => 'pending',
             'next_review_at' => now()->addWeek()->toDateString(),
+            'disclosure_status' => 'draft', 'child_assent_status' => 'pending',
         ])->assertOk()
             ->assertJsonPath('data.service_path', 'individual_counseling')
             ->assertJsonPath('data.assigned_expert_name', $expert->name);
 
         $this->assertDatabaseHas('support_cases', ['profile_id' => $profile->id, 'status' => 'reviewing']);
+    }
+
+    public function test_parent_only_receives_approved_summary_and_can_record_consent(): void
+    {
+        $parent = User::factory()->create(['portal_role' => 'parent']);
+        $profile = Profile::factory()->create(['user_id' => $parent->id, 'type' => 'child']);
+        ProfileUserAssignment::create(['profile_id' => $profile->id, 'user_id' => $parent->id, 'role' => 'parent']);
+        $case = SupportCase::create([
+            'profile_id' => $profile->id, 'service_path' => 'individual_counseling', 'status' => 'contact_planned',
+            'priority' => 'priority', 'professional_notes' => 'Restricted note',
+            'professional_formulation' => ['overview' => 'Restricted formulation'],
+            'parent_summary' => 'A private support conversation is available.', 'disclosure_status' => 'approved',
+            'consent_status' => 'pending', 'child_assent_status' => 'pending',
+        ]);
+
+        $this->actingAs($parent, 'sanctum')->getJson('/api/portal/parent')
+            ->assertOk()
+            ->assertJsonPath('data.support_invitation.summary', 'A private support conversation is available.')
+            ->assertJsonMissing(['professional_notes'])
+            ->assertJsonMissing(['professional_formulation']);
+
+        $this->postJson('/api/portal/parent/support-consent', ['decision' => 'consent'])
+            ->assertOk()->assertJsonPath('data.consent_status', 'recorded');
+        $this->assertNotNull($case->fresh()->parent_consent_at);
+        $this->assertSame('active', $case->fresh()->status);
     }
 }

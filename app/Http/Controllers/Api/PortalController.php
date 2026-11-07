@@ -18,7 +18,26 @@ class PortalController extends BaseController
     {
         $child = $request->user()->assignedProfiles()->wherePivot('role', 'parent')->where('type', 'child')->first()
             ?? $request->user()->profiles()->where('type', 'child')->firstOrFail();
-        return $this->sendResponse('fetched', $this->profileSummary($child, 'parent'));
+        $summary = $this->profileSummary($child, 'parent');
+        $summary['support_invitation'] = $this->parentSupportInvitation($child->supportCase);
+        return $this->sendResponse('fetched', $summary);
+    }
+
+    public function parentSupportConsent(Request $request)
+    {
+        $decision = $request->validate(['decision' => ['required', Rule::in(['consent', 'decline'])]])['decision'];
+        $child = $request->user()->assignedProfiles()->wherePivot('role', 'parent')->where('type', 'child')->first()
+            ?? $request->user()->profiles()->where('type', 'child')->firstOrFail();
+        $case = $child->supportCase;
+        abort_unless($case && in_array($case->disclosure_status, ['approved', 'shared'], true), 404);
+        $case->update($decision === 'consent' ? [
+            'consent_status' => 'recorded', 'parent_consent_at' => now(), 'parent_declined_at' => null,
+            'status' => $case->status === 'contact_planned' ? 'active' : $case->status,
+        ] : [
+            'consent_status' => 'declined', 'parent_declined_at' => now(), 'parent_consent_at' => null,
+        ]);
+
+        return $this->sendResponse('updated', $this->parentSupportInvitation($case->fresh()));
     }
 
     public function teacherOverview(Request $request)
@@ -65,6 +84,7 @@ class PortalController extends BaseController
         $summary['context'] = collect($profile->details ?? [])->only([
             'date_of_birth', 'grade_level', 'school_name', 'curriculum', 'primary_language',
             'strong_subjects', 'support_subjects', 'interests', 'expression_preferences',
+            'location_context', 'household_context', 'technology_context', 'accessibility_needs',
         ]);
         $summary['source_coverage'] = [
             'student' => $this->sourceCoverage($summary['activities']),
@@ -75,6 +95,8 @@ class PortalController extends BaseController
             'parent' => $this->taskFeed($profile, 'parent'),
             'teacher' => $this->taskFeed($profile, 'teacher'),
         ];
+        $summary['source_evidence'] = $this->sourceEvidence($profile);
+        $summary['assessment_report'] = $this->assessmentReport($profile, $summary);
 
         return $this->sendResponse('fetched', $summary);
     }
@@ -92,6 +114,20 @@ class PortalController extends BaseController
             'professional_notes' => ['nullable', 'string', 'max:5000'],
             'consent_status' => ['required', Rule::in(['not_recorded', 'pending', 'recorded', 'declined'])],
             'next_review_at' => ['nullable', 'date'],
+            'professional_formulation' => ['nullable', 'array'],
+            'professional_formulation.overview' => ['nullable', 'string', 'max:3000'],
+            'professional_formulation.strengths' => ['nullable', 'array', 'max:12'],
+            'professional_formulation.strengths.*' => ['string', 'max:500'],
+            'professional_formulation.current_needs' => ['nullable', 'array', 'max:12'],
+            'professional_formulation.current_needs.*' => ['string', 'max:500'],
+            'professional_formulation.hypotheses' => ['nullable', 'array', 'max:12'],
+            'professional_formulation.hypotheses.*' => ['string', 'max:500'],
+            'professional_formulation.limitations' => ['nullable', 'array', 'max:12'],
+            'professional_formulation.limitations.*' => ['string', 'max:500'],
+            'parent_summary' => ['nullable', 'string', 'max:3000'],
+            'disclosure_status' => ['required', Rule::in(['not_prepared', 'draft', 'approved', 'shared'])],
+            'disclosure_scope' => ['nullable', 'array'],
+            'child_assent_status' => ['required', Rule::in(['not_requested', 'pending', 'assented', 'declined'])],
         ]);
         $case = SupportCase::updateOrCreate(['profile_id' => $profile->id], $data);
 
@@ -160,6 +196,8 @@ class PortalController extends BaseController
             'service_path' => 'assessment_pending', 'status' => 'new', 'priority' => 'routine',
             'assigned_expert_user_id' => null, 'assigned_expert_name' => null, 'rationale' => null,
             'professional_notes' => null, 'consent_status' => 'not_recorded', 'next_review_at' => null,
+            'professional_formulation' => null, 'parent_summary' => null, 'disclosure_status' => 'not_prepared',
+            'disclosure_scope' => [], 'child_assent_status' => 'not_requested',
         ];
 
         return [
@@ -172,7 +210,80 @@ class PortalController extends BaseController
             'professional_notes' => $case->professional_notes,
             'consent_status' => $case->consent_status,
             'next_review_at' => optional($case->next_review_at)->format('Y-m-d'),
+            'professional_formulation' => $case->professional_formulation,
+            'parent_summary' => $case->parent_summary,
+            'disclosure_status' => $case->disclosure_status,
+            'disclosure_scope' => $case->disclosure_scope ?? [],
+            'child_assent_status' => $case->child_assent_status,
+            'parent_consent_at' => optional($case->parent_consent_at)->toIso8601String(),
         ];
+    }
+
+    private function parentSupportInvitation(?SupportCase $case): ?array
+    {
+        if (! $case || ! in_array($case->disclosure_status, ['approved', 'shared'], true) || ! $case->parent_summary) return null;
+
+        return [
+            'service_path' => $case->service_path,
+            'summary' => $case->parent_summary,
+            'consent_status' => $case->consent_status,
+            'child_assent_status' => $case->child_assent_status,
+            'next_review_at' => optional($case->next_review_at)->format('Y-m-d'),
+            'can_decide' => in_array($case->consent_status, ['not_recorded', 'pending'], true),
+            'disclosure_note' => 'This family summary does not include the restricted psychological formulation, raw answers, or professional notes.',
+        ];
+    }
+
+    private function assessmentReport(Profile $profile, array $summary): array
+    {
+        $coverage = $summary['source_coverage'];
+        $coveredSources = collect($coverage)->filter(fn ($source) => $source['percent'] >= 50)->count();
+        $confidence = $coveredSources === 3 && $summary['evidence_coverage']['play_domains'] >= 3
+            ? 'strong_multi_source' : ($coveredSources >= 2 ? 'moderate' : 'limited');
+        $missing = collect($coverage)->filter(fn ($source) => $source['percent'] < 50)->keys()->values();
+
+        return [
+            'report_type' => 'restricted_professional_working_report',
+            'generated_at' => now()->toIso8601String(),
+            'evidence_confidence' => $confidence,
+            'missing_or_limited_sources' => $missing,
+            'formulation' => $profile->supportCase?->professional_formulation,
+            'observed_play_domains' => collect($summary['play_signals'])->map(fn ($signal) => [
+                'domain' => $signal['domain'], 'observations' => $signal['observations'],
+                'features' => $signal['latest_features'],
+            ])->values(),
+            'interpretation_limits' => [
+                'This is a working human-reviewed formulation, not a diagnosis.',
+                'Missing sources lower confidence; absence of evidence is not evidence of absence.',
+                'Game and questionnaire observations must be interpreted with developmental, language, cultural, educational, and situational context.',
+                'A service pathway records a support decision and must not be treated as a clinical label.',
+            ],
+            'deployment_notice' => 'Research and demonstration use only. Bangladesh legal review is required before production collection or profiling of child behavioral data; consent, access controls, and human review do not by themselves establish legal compliance.',
+            'governance_basis' => [
+                ['title' => 'WHO AA-HA! adolescent health guidance', 'url' => 'https://www.who.int/initiatives/global-accelerated-action-for-the-health-of-adolescent/aa-ha%21-guidance-2d-edition/chapter-5/section-5-3'],
+                ['title' => 'WHO EASE assessment guidance', 'url' => 'https://iris.who.int/bitstream/handle/10665/374996/9789240082755-eng.pdf'],
+                ['title' => 'Bangladesh Mental Health Act 2018', 'url' => 'https://bdlaws.minlaw.gov.bd/act-print-1273.html'],
+                ['title' => 'Bangladesh Children Act 2013', 'url' => 'https://bdlaws.minlaw.gov.bd/act-details-1119.html'],
+                ['title' => 'Bangladesh Personal Data Protection Ordinance 2025 — child data provision', 'url' => 'https://bdlaws.minlaw.gov.bd/act-1574/act-chapter-print-2585.html'],
+            ],
+        ];
+    }
+
+    private function sourceEvidence(Profile $profile): array
+    {
+        return Response::where('profile_id', $profile->id)
+            ->with(['question.scale', 'option'])
+            ->get()
+            ->filter(fn ($response) => in_array($response->question?->scale?->visible_to, ['child', 'parent', 'teacher'], true))
+            ->groupBy(fn ($response) => $response->question->scale->visible_to)
+            ->map(fn ($responses) => $responses->map(fn ($response) => [
+                'activity' => $response->question->scale->name,
+                'construct' => $response->question->construct,
+                'prompt' => $response->question->text,
+                'answer' => $response->option?->text ?? $response->text_answer ?? $response->numeric_answer,
+                'recorded_at' => optional($response->updated_at)->toIso8601String(),
+            ])->values())
+            ->all();
     }
 
     private function taskFeed($profile, string $audience)

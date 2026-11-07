@@ -94,13 +94,28 @@ class DemoSchoolSeeder extends Seeder
             ];
             foreach (Schema::hasTable('support_cases') ? $profileIds : [] as $index => $profileId) {
                 [$servicePath, $status, $priority, $rationale] = $casePlans[$index];
-                SupportCase::updateOrCreate(['profile_id' => $profileId], [
+                $caseData = [
                     'assigned_expert_user_id' => $index < 3 ? $expert->id : null,
                     'service_path' => $servicePath, 'status' => $status, 'priority' => $priority,
                     'rationale' => $rationale, 'professional_notes' => $index === 2 ? 'Review recent routine changes privately with the family and school counselor.' : null,
                     'consent_status' => $index < 2 ? 'recorded' : ($index === 2 ? 'pending' : 'not_recorded'),
                     'next_review_at' => now()->addDays([30, 14, 7, 10][$index])->toDateString(),
-                ]);
+                ];
+                if (Schema::hasColumn('support_cases', 'professional_formulation')) {
+                    $caseData = array_merge($caseData, [
+                        'professional_formulation' => $this->caseFormulation($index),
+                    'parent_summary' => [
+                        'Current information supports continuing strengths-based learning and routine observation. / বর্তমান তথ্য শক্তিভিত্তিক শেখা ও নিয়মিত পর্যবেক্ষণ চালিয়ে যাওয়ার পক্ষে।',
+                        'A small-group support option may help build confidence and task-planning skills. / ছোট দলে সহায়তা আত্মবিশ্বাস ও কাজ পরিকল্পনার দক্ষতা বাড়াতে সাহায্য করতে পারে।',
+                        'The school support team would like to offer a private counselor conversation to understand recent changes and plan support together. / সাম্প্রতিক পরিবর্তন বুঝতে ও একসঙ্গে সহায়তা পরিকল্পনা করতে স্কুল সহায়তা দল একটি ব্যক্তিগত কাউন্সেলর আলোচনার সুযোগ দিতে চায়।',
+                        'More information from home, school, and the student is needed before recommending a support option. / সহায়তার বিকল্প প্রস্তাব করার আগে বাড়ি, স্কুল ও শিক্ষার্থীর কাছ থেকে আরও তথ্য প্রয়োজন।',
+                    ][$index],
+                    'disclosure_status' => $index < 3 ? 'approved' : 'draft',
+                    'disclosure_scope' => ['support_path', 'parent_summary', 'consent_request'],
+                    'child_assent_status' => $index < 2 ? 'assented' : ($index === 2 ? 'pending' : 'not_requested'),
+                    ]);
+                }
+                SupportCase::updateOrCreate(['profile_id' => $profileId], $caseData);
             }
 
             $group->profiles()->sync($profileIds);
@@ -115,6 +130,9 @@ class DemoSchoolSeeder extends Seeder
             'student_identifier' => 'SLS-5-'.str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT),
             'school_name' => 'Shapla Learning School',
             'primary_language' => $index % 2 ? 'Bangla and English' : 'English and Bangla',
+            'location_context' => ['Dhaka metropolitan school catchment', 'Peri-urban school catchment', 'Recently relocated within Dhaka division', 'Dhaka metropolitan school catchment'][$index],
+            'household_context' => ['Two-parent household with shared caregiving', 'Extended-family household', 'Parent-led household with recent routine changes', 'Extended-family caregiving arrangement'][$index],
+            'technology_context' => ['Shared family smartphone and school tablet access', 'Personal family smartphone and intermittent broadband', 'Shared Android phone with mobile data', 'Limited shared-device access'][$index],
             'interests' => $student['interests'],
         ];
         if ($index >= 2) {
@@ -212,6 +230,40 @@ class DemoSchoolSeeder extends Seeder
             'languages_used' => ['Bangla', 'English'], 'service_modes' => ['Individual', 'Group', 'School consultation'],
             'availability' => 'Weekdays, school referral hours',
         ];
+    }
+
+    private function caseFormulation(int $index): array
+    {
+        return [
+            [
+                'overview' => 'Available student, family, teacher, and play evidence is broadly consistent with stable participation and strong visual expression.',
+                'strengths' => ['Visual reasoning and imaginative expression', 'Curiosity and persistence with building tasks', 'Stable family and classroom participation'],
+                'current_needs' => ['Continue developing written explanation without replacing visual strengths'],
+                'hypotheses' => ['Visual entry points may increase engagement with extended written tasks'],
+                'limitations' => ['Current evidence reflects one school term and should be reviewed longitudinally'],
+            ],
+            [
+                'overview' => 'Multi-source evidence suggests strong social participation and empathy, with less consistent stamina during extended independent writing.',
+                'strengths' => ['Collaboration and perspective-taking', 'Pattern finding', 'Strong engagement in movement and team activities'],
+                'current_needs' => ['Task planning and confidence during extended independent work'],
+                'hypotheses' => ['A structured peer group may support planning practice and confidence'],
+                'limitations' => ['Performance may vary by language and task format'],
+            ],
+            [
+                'overview' => 'Partial student, family, and teacher evidence indicates a recent participation change alongside a reported sleep-routine change. A private review is warranted before interpretation.',
+                'strengths' => ['Hands-on exploration', 'Interest in machines and cricket'],
+                'current_needs' => ['Clarify recent changes in routine, participation, and support needs'],
+                'hypotheses' => ['Sleep or transition context may be affecting classroom participation', 'Additional explanations remain possible'],
+                'limitations' => ['Student activities are incomplete', 'Parent evidence is limited', 'No conclusion should be drawn from the current snapshot alone'],
+            ],
+            [
+                'overview' => 'There is not enough multi-source information for a responsible psychological formulation.',
+                'strengths' => ['Imagination is reported as a strength'],
+                'current_needs' => ['Complete basic profile and gather student, family, and classroom observations'],
+                'hypotheses' => [],
+                'limitations' => ['Student, parent, teacher, and play evidence are substantially incomplete'],
+            ],
+        ][$index];
     }
 
     private function seedEvidence(Profile $profile, int $studentIndex, float $ratio): void
