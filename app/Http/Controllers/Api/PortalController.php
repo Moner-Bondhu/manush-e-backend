@@ -10,7 +10,6 @@ use App\Models\Response;
 use App\Models\Scale;
 use App\Models\SupportCase;
 use App\Services\LongitudinalProfileService;
-use App\Services\SyntheticBenchmarkService;
 use App\Services\ProfessionalMeasurementReportService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -77,8 +76,8 @@ class PortalController extends BaseController
             'summary' => [
                 'students' => $profiles->count(),
                 'profile_average' => (int) round($profiles->avg(fn ($profile) => $this->profileCompletion($profile->details ?? [])) ?: 0),
-                'priority_reviews' => $profiles->filter(fn ($profile) => data_get($profile->details, 'support_review.priority') === 'priority')->count(),
-                'context_needed' => $profiles->filter(fn ($profile) => ! in_array(data_get($profile->details, 'support_review.priority'), ['routine', 'follow_up', 'priority'], true))->count(),
+                'priority_reviews' => $profiles->filter(fn ($profile) => $profile->supportCase?->priority === 'priority')->count(),
+                'context_needed' => $profiles->filter(fn ($profile) => ! $profile->supportCase || $profile->supportCase->service_path === 'assessment_pending')->count(),
                 'service_paths' => [
                     'individual_counseling' => $profiles->where('supportCase.service_path', 'individual_counseling')->count(),
                     'group_support' => $profiles->where('supportCase.service_path', 'group_support')->count(),
@@ -87,7 +86,6 @@ class PortalController extends BaseController
                 ],
             ],
             'students' => $profiles->map(fn ($profile) => $this->profileSummary($profile, 'expert'))->values(),
-            'synthetic_benchmark' => app(SyntheticBenchmarkService::class)->report(),
         ]);
     }
 
@@ -366,39 +364,45 @@ class PortalController extends BaseController
 
     private function supportReview($profile, string $audience): array
     {
-        $details = $profile->details ?? [];
-        $review = (array) ($details['support_review'] ?? []);
-        $priority = in_array($review['priority'] ?? null, ['routine', 'follow_up', 'priority'], true)
-            ? $review['priority']
-            : 'context_needed';
+        $case = $profile->supportCase;
 
-        $labels = [
-            'routine' => 'Routine support / নিয়মিত সহায়তা',
-            'follow_up' => 'Follow up / ফলো-আপ প্রয়োজন',
-            'priority' => 'Priority review / অগ্রাধিকার পর্যালোচনা',
-            'context_needed' => 'More context needed / আরও তথ্য প্রয়োজন',
-        ];
+        if ($audience !== 'expert') {
+            return [
+                'priority' => 'not_disclosed',
+                'label' => 'Support plan / সহায়তা পরিকল্পনা',
+                'summary' => $audience === 'parent' && $case && in_array($case->disclosure_status, ['approved', 'shared'], true)
+                    ? $case->parent_summary
+                    : null,
+                'evidence' => [],
+                'next_actions' => [],
+                'expert_referral' => null,
+            ];
+        }
 
-        $actions = array_values((array) ($review[$audience.'_actions'] ?? []));
-        if ($actions === []) {
-            $actions = $priority === 'context_needed'
-                ? ['Complete the student profile and add two classroom or home observations. / শিক্ষার্থীর প্রোফাইল সম্পূর্ণ করুন এবং শ্রেণিকক্ষ বা বাড়ির দুটি পর্যবেক্ষণ যোগ করুন।']
-                : ['Continue the current support plan and review new observations regularly. / বর্তমান সহায়তা পরিকল্পনা চালিয়ে যান এবং নতুন পর্যবেক্ষণ নিয়মিত পর্যালোচনা করুন।'];
+        if (! $case) {
+            return [
+                'priority' => 'context_needed',
+                'label' => 'Assessment pending / মূল্যায়ন বাকি',
+                'summary' => null,
+                'evidence' => [],
+                'next_actions' => [],
+                'expert_referral' => null,
+                'decision_source' => 'none',
+            ];
         }
 
         return [
-            'priority' => $priority,
-            'label' => $labels[$priority],
-            'summary' => $review['summary'] ?? 'No urgent concern is indicated in the available school-supported information. / স্কুল-সমর্থিত বর্তমান তথ্যে জরুরি উদ্বেগ নির্দেশিত হয়নি।',
-            'evidence' => array_values((array) ($review['evidence'] ?? [])),
-            'next_actions' => $actions,
-            'expert_referral' => in_array($priority, ['follow_up', 'priority'], true) ? [
-                'provider' => 'Moner Bondhu',
-                'service' => 'Student and family counselling / শিক্ষার্থী ও পরিবার কাউন্সেলিং',
-                'url' => 'https://www.monerbondhu.com/services',
-                'phone' => '+880 1776632344',
-                'note' => 'An authorized adult can contact the provider; this is a referral option, not a diagnosis. / অনুমোদিত প্রাপ্তবয়স্ক সেবাদাতার সঙ্গে যোগাযোগ করতে পারেন; এটি রেফারেলের বিকল্প, রোগনির্ণয় নয়।',
-            ] : null,
+            'priority' => $case->priority,
+            'label' => [
+                'routine' => 'Routine / নিয়মিত',
+                'follow_up' => 'Follow up / ফলো-আপ',
+                'priority' => 'Priority / অগ্রাধিকার',
+            ][$case->priority],
+            'summary' => $case->rationale,
+            'evidence' => [],
+            'next_actions' => [],
+            'expert_referral' => null,
+            'decision_source' => 'human_recorded',
         ];
     }
 }

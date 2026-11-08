@@ -307,8 +307,8 @@ class ApiControllerTest extends TestCase
 
         $this->actingAs($parent, 'sanctum')->getJson('/api/portal/parent')
             ->assertOk()
-            ->assertJsonPath('data.support_review.priority', 'priority')
-            ->assertJsonPath('data.support_review.expert_referral.provider', 'Moner Bondhu')
+            ->assertJsonPath('data.support_review.priority', 'not_disclosed')
+            ->assertJsonPath('data.support_review.expert_referral', null)
             ->assertJsonMissing(['support_case']);
 
         $this->actingAs($student, 'sanctum')->getJson('/api/user')
@@ -333,8 +333,7 @@ class ApiControllerTest extends TestCase
             ->assertJsonPath('data.viewer_role', 'expert')
             ->assertJsonPath('data.summary.students', 1)
             ->assertJsonPath('data.students.0.profile_completion', 100)
-            ->assertJsonPath('data.synthetic_benchmark.dataset.synthetic', true)
-            ->assertJsonStructure(['data' => ['synthetic_benchmark' => ['metrics' => ['all' => ['sensitivity', 'specificity', 'precision', 'f1']]]]]);
+            ->assertJsonMissingPath('data.synthetic_benchmark');
     }
 
     public function test_non_admin_cannot_open_review_dashboard(): void
