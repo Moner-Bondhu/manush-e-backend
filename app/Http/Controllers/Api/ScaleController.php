@@ -151,7 +151,8 @@ class ScaleController extends BaseController
     {
         $user = $request->user();
         $role = $user->portal_role ?: ($user->user_type === 'teacher' ? 'teacher' : null);
+        $roleAudience = $role === 'student' ? 'child' : $role;
         $owns = $profile && $user->profiles()->whereKey($profile->id)->exists();
-        abort_unless($user->user_type === 'admin' || $role === $audience || ($role === null && ($profile === null || $owns)), 403);
+        abort_unless($user->user_type === 'admin' || $roleAudience === $audience || ($role === null && ($profile === null || $owns)), 403);
     }
 }

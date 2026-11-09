@@ -290,6 +290,44 @@ class ApiControllerTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_assigned_student_can_open_and_answer_child_activity(): void
+    {
+        $student = User::factory()->create(['portal_role' => 'student']);
+        $profile = Profile::factory()->create(['type' => 'child']);
+        ProfileUserAssignment::create([
+            'profile_id' => $profile->id,
+            'user_id' => $student->id,
+            'role' => 'student',
+        ]);
+        $scale = Scale::factory()->create([
+            'visible_to' => 'child',
+            'code' => 'CHILD-ACTIVITY',
+            'is_published' => true,
+        ]);
+        $question = Question::factory()->create([
+            'scale_id' => $scale->id,
+            'type' => 'select_one',
+        ]);
+        $option = Option::factory()->create(['question_id' => $question->id]);
+
+        $this->actingAs($student, 'sanctum')
+            ->getJson('/api/scales/child')
+            ->assertOk()
+            ->assertJsonFragment(['id' => $scale->id, 'code' => 'CHILD-ACTIVITY']);
+
+        $this->actingAs($student, 'sanctum')
+            ->postJson("/api/question/respond/{$question->id}", [
+                'profile_id' => $profile->id,
+                'option_id' => $option->id,
+            ])->assertOk();
+
+        $this->assertDatabaseHas('responses', [
+            'profile_id' => $profile->id,
+            'question_id' => $question->id,
+            'option_id' => $option->id,
+        ]);
+    }
+
     public function test_parent_support_review_is_adult_only_and_includes_referral_for_priority_case(): void
     {
         $parent = User::factory()->create(['portal_role' => 'parent']);
